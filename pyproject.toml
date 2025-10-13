@@ -1,0 +1,25 @@
+[project]
+name = "ai-guardrails"
+version = "1.0.0"
+description = "AI coding guardrails for Claude Code"
+authors = [
+    { name = "Zenable", email = "support@zenable.io" }
+]
+dependencies = []
+readme = "README.md"
+requires-python = ">= 3.13"
+
+[project.urls]
+Homepage = "https://zenable.io"
+Documentation = "https://docs.zenable.io"
+Repository = "https://github.com/Zenable-io/ai-guardrails"
+
+[tool.uv.pip]
+universal = true
+generate-hashes = true
+require-hashes = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

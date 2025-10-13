@@ -1,14 +1,14 @@
 {
-  "name": "zenable-plugins",
+  "name": "claude-plugins",
   "owner": {
     "name": "Zenable",
     "url": "https://zenable.io"
   },
   "plugins": [
     {
-      "name": "zenable-core",
+      "name": "zenable-guardrails",
       "description": "AI coding guardrails with conformance checks, MCP integration, and policy enforcement.",
-      "source": "./plugins/zenable-core",
+      "source": "./plugins/zenable-guardrails",
       "keywords": [
         "zenable",
         "guardrails",

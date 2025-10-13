@@ -1,0 +1,79 @@
+---
+# https://taskfile.dev
+
+version: '3'
+
+set:
+  - nounset
+  - errexit
+  - pipefail
+
+vars:
+  PROJECT_NAME: ai-guardrails
+  RUN_SCRIPT: 'uv run --frozen'
+
+silent: true
+
+tasks:
+  init-uv:
+    desc: Initializes the uv virtual environment
+    internal: true
+    sources:
+      - pyproject.toml
+      - uv.lock
+    cmds:
+      - uv sync --frozen
+
+  init-pre-commit:
+    desc: Setup pre-commit
+    internal: true
+    sources:
+      - .pre-commit-config.yaml
+    status:
+      # Don't do any of this if you aren't in a git repository; quote to avoid yaml intrepretering the ! as a node tag
+      # https://yaml.org/spec/1.2.2/#691-node-tags
+      - '! test -d .git'
+    cmds:
+      - uv tool install pre-commit
+      # Don't run this in pipelines
+      - '{{if ne .GITHUB_ACTIONS "true"}}{{.RUN_SCRIPT}} pre-commit install{{else}}echo "Detected a github actions pipeline; skipping the pre-commit install"{{end}}'
+
+  init:
+    desc: Initialize the repo for local use; intended to be run after git clone
+    cmds:
+      - task: init-uv
+      - task: init-pre-commit
+
+  lint:
+    desc: Run the linter(s)
+    cmds:
+      - '{{.RUN_SCRIPT}} pre-commit run --all-files'
+
+  validate:
+    desc: Validate the pre-commit config
+    cmds:
+      - '{{.RUN_SCRIPT}} pre-commit validate-config'
+
+  test:
+    desc: Run the project tests
+    cmds:
+      - task: test-zenable-guardrails
+
+  test-zenable-guardrails:
+    desc: Validate the zenable-guardrails plugin structure
+    cmds:
+      - bash tests/zenable-guardrails/validate-structure.sh
+
+  clean:
+    desc: Clean up build artifacts, cache files/directories, temp files, etc.
+    cmds:
+      - rm -rf .pytest_cache
+      - rm -rf htmlcov
+      - rm -rf .coverage
+      - rm -rf dist
+      - rm -rf build
+      - rm -rf *.egg-info
+      - find . -type d -name __pycache__ -exec rm -rf {} + || true
+      - find . -type d -name .mypy_cache -exec rm -rf {} + || true
+      - find . -type d -name .ruff_cache -exec rm -rf {} + || true
+      - find . -type f -name '*.pyc' -delete || true

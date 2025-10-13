@@ -7,7 +7,7 @@ AI coding guardrails for Claude Code. Enforce organizational standards, security
 ```bash
 # Add marketplace and install plugin
 /plugin marketplace add Zenable-io/ai-guardrails
-/plugin install zenable-core@zenable-plugins
+/plugin install zenable-guardrails@claude-plugins
 
 # Try it out
 /check
@@ -20,11 +20,11 @@ Add to `.claude/settings.json`:
 ```json
 {
   "extraKnownMarketplaces": {
-    "zenable-plugins": {
+    "claude-plugins": {
       "source": {"source": "github", "repo": "Zenable-io/ai-guardrails"}
     }
   },
-  "enabledPlugins": ["zenable-core@zenable-plugins"]
+  "enabledPlugins": ["zenable-guardrails@claude-plugins"]
 }
 ```
 
@@ -59,7 +59,6 @@ repos:
       - id: zenable-check
 ```
 
-See [examples/](./examples/) for complete setup templates.
 
 ## Documentation
 

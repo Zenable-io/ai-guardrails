@@ -3,7 +3,7 @@
 
 set -e
 
-PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../plugins/zenable-guardrails" && pwd)"
 
 echo "Validating Zenable plugin structure..."
 
@@ -63,4 +63,4 @@ echo "  Agents: $agent_count"
 echo ""
 echo "You can now install this plugin with:"
 echo "  /plugin marketplace add Zenable-io/ai-guardrails"
-echo "  /plugin install zenable-core@zenable-plugins"
+echo "  /plugin install zenable-guardrails@claude-plugins"

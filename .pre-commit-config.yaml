@@ -1,0 +1,27 @@
+---
+repos:
+ - repo: https://github.com/pre-commit/pre-commit-hooks
+   rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
+   hooks:
+    - id: check-case-conflict
+    - id: check-executables-have-shebangs
+    - id: check-json
+    - id: check-shebang-scripts-are-executable
+    - id: check-symlinks
+    - id: check-yaml
+    - id: detect-aws-credentials
+      args: ['--allow-missing-credentials']
+    - id: detect-private-key
+    - id: end-of-file-fixer
+    - id: trailing-whitespace
+ - repo: https://github.com/koalaman/shellcheck-precommit
+   rev: 99470f5e12208ff0fb17ab81c3c494f7620a1d8d  # frozen: v0.11.0
+   hooks:
+     - id: shellcheck
+       args: [ -x, --source-path=SCRIPTDIR ]
+ - repo: https://github.com/trufflesecurity/trufflehog
+   rev: 466da5b0bb161144f6afca9afe5d57975828c410  # frozen: v3.90.8
+   hooks:
+     - id: trufflehog
+       # Check the past 2 commits; it's useful to make this go further back than main when running this where main and HEAD are equal
+       entry: trufflehog git file://. --since-commit main~1 --no-verification --fail
