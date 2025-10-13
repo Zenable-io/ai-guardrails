@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.claude.com/schemas/settings.json",
+  "extraKnownMarketplaces": {
+    "zenable-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "Zenable-io/ai-guardrails"
+      }
+    }
+  },
+  "enabledPlugins": ["zenable-core@zenable-plugins"]
+}

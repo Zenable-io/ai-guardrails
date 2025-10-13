@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mcp__zenable__check ${MODIFIED_FILES}"
+          }
+        ]
+      }
+    ],
+    "PreCommit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mcp__zenable__check ${STAGED_FILES}"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+---
+- id: zenable-check
+  name: Zenable Conformance Check
+  description: Validate files against organizational requirements, security policies, and quality standards
+  language: system
+  entry: uvx zenable-mcp@latest check
+  pass_filenames: true
