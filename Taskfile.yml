@@ -16,13 +16,21 @@ silent: true
 
 tasks:
   init-uv:
-    desc: Initializes the uv virtual environment
+    desc: Initialize a uv virtual environment
+    requires:
+      vars:
+        # This is a bool, so we cannot use enum because taskfile only supports strings here
+        - DEV_DEPS
     internal: true
-    sources:
-      - pyproject.toml
-      - uv.lock
+    # We intentionally don't use sources because uv is super fast so we re-sync every time
+    preconditions:
+      - which uv
+      - uv --version
     cmds:
-      - uv sync --frozen
+      # Create lockfile if it doesn't exist
+      - '[ -f uv.lock ] || uv lock {{if .DEBUG}}-v{{end}}'
+      # --all-extras: Only installs optional dependencies which are depended on in the **current** project's pyproject.toml
+      - uv sync --frozen --all-extras {{if not .DEV_DEPS}}--no-dev{{end}} {{if .DEBUG}}-v{{end}}
 
   init-pre-commit:
     desc: Setup pre-commit
@@ -42,7 +50,23 @@ tasks:
     desc: Initialize the repo for local use; intended to be run after git clone
     cmds:
       - task: init-uv
+        vars:
+          DEV_DEPS: true
       - task: init-pre-commit
+
+  update:
+    desc: >
+      Update the project dev and runtime dependencies, the lock files, and then install the updates
+    preconditions:
+      - which uv
+      - uv --version
+    cmds:
+      - uv tool upgrade --all
+      - uv lock --upgrade
+      - task: init-uv
+        vars:
+          # We want the dev deps because this initializes the environment with the upgraded deps for a developer's use
+          DEV_DEPS: true
 
   lint:
     desc: Run the linter(s)
