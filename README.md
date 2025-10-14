@@ -30,17 +30,18 @@ Add to `.claude/settings.json`:
 
 ## What's Included
 
-**Commands:** `/check`, `/validate`, `/requirements`
+**Command:** `/check` - Conformance checks, validation, and requirements display
 **Agent:** Guardrails reviewer for conformance-focused code review
-**Hooks:** Automatic validation on file edits and commits
+**Hooks:** Automatic validation on file edits via uvx zenable-mcp
 **MCP:** Direct connection to [mcp.zenable.app](https://mcp.zenable.app)
 
 ## Usage
 
 ```bash
-/check                    # Validate changed files
-/validate                 # Full codebase validation
-/requirements             # Show active policies
+/check                    # Check modified files
+/check --all              # Full codebase validation
+/check --requirements     # Show active policies
+/check src/api/auth.py    # Check specific file
 ```
 
 Or ask the agent:
@@ -71,7 +72,3 @@ repos:
 
 **Issues:** [GitHub Issues](https://github.com/Zenable-io/ai-guardrails/issues)
 **Website:** [zenable.io](https://zenable.io)
-
-## License
-
-Apache-2.0

@@ -5,6 +5,7 @@ description = "AI coding guardrails for Claude Code"
 authors = [
     { name = "Zenable", email = "support@zenable.io" }
 ]
+keywords = ["zenable", "guardrails", "policy-as-code", "conformance", "mcp", "governance", "quality", "security", "specifications", "spec-driven development", "context engineering"]
 dependencies = []
 readme = "README.md"
 requires-python = ">= 3.13"

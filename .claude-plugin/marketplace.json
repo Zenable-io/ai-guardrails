@@ -15,7 +15,10 @@
         "policy-as-code",
         "conformance",
         "mcp",
-        "governance"
+        "governance",
+        "specifications",
+        "spec-driven development",
+        "context engineering"
       ],
       "strict": true
     }

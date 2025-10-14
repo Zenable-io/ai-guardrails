@@ -2,7 +2,7 @@
   "mcpServers": {
     "zenable": {
       "type": "http",
-      "url": "https://mcp.zenable.app/mcp"
+      "url": "https://mcp.zenable.app"
     }
   }
 }
