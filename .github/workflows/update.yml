@@ -11,6 +11,9 @@ defaults:
   run:
     shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
 
+env:
+  python_version: "3.13"
+
 jobs:
   update-dependencies:
     name: Update Python dependencies
@@ -20,20 +23,16 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v4
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: actions/checkout@v5
         with:
-          enable-cache: true
-
-      - name: Install Task
-        run: |
-          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-
+          persist-credentials: 'false'
+      - name: Bootstrap repository
+        uses: ./.github/actions/bootstrap
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: ${{ env.python_version }}
       - name: Update dependencies
-        run: ~/.local/bin/task -o prefixed -v update
-
+        run: task -o prefixed -v update
       - name: Create or update a pull request
         uses: peter-evans/create-pull-request@v7
         with:

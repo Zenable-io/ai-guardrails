@@ -62,6 +62,7 @@ tasks:
       - uv --version
     cmds:
       - uv tool upgrade --all
+      - uv tool run pre-commit autoupdate --freeze --jobs 4
       - uv lock --upgrade
       - task: init-uv
         vars:
