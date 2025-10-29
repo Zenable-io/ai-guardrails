@@ -31,7 +31,7 @@ def main() -> int:
     # Check required directories exist
     required_dirs = [
         "commands",
-        "agents",
+        "skills",
         "hooks",
     ]
 
@@ -74,17 +74,18 @@ def main() -> int:
         print(f"❌ Error validating plugin.json fields: {e}")
         return 1
 
-    # Count commands and agents
+    # Count commands and skills
     commands_dir = plugin_root / "commands"
-    agents_dir = plugin_root / "agents"
+    skills_dir = plugin_root / "skills"
 
     command_count = len(list(commands_dir.glob("*.md"))) if commands_dir.exists() else 0
-    agent_count = len(list(agents_dir.glob("*.md"))) if agents_dir.exists() else 0
+    # Skills are in subdirectories with SKILL.md files
+    skill_count = len(list(skills_dir.glob("*/SKILL.md"))) if skills_dir.exists() else 0
 
     print()
     print("Plugin structure validation passed!")
     print(f"  Commands: {command_count}")
-    print(f"  Agents: {agent_count}")
+    print(f"  Skills: {skill_count}")
     print()
     print("You can now install this plugin with:")
     print("  /plugin marketplace add Zenable-io/ai-guardrails")

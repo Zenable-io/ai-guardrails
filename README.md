@@ -1,6 +1,6 @@
 # Zenable AI Guardrails
 
-AI coding guardrails for Claude Code. Enforce organizational standards, security policies, and quality requirements directly in your development workflow.
+AI coding guardrails. Enforce organizational standards, security policies, and quality requirements directly in your development workflow.
 
 ## Quick Start
 
@@ -31,9 +31,9 @@ Add to `.claude/settings.json`:
 ## What's Included
 
 **Command:** `/check` - Conformance checks, validation, and requirements display
-**Agent:** Guardrails reviewer for conformance-focused code review
-**Hooks:** Automatic validation on file edits via uvx zenable-mcp
-**MCP:** Direct connection to [mcp.zenable.app](https://mcp.zenable.app)
+**Skill:** Guardrails reviewer for autonomous conformance-focused code review
+**Hooks:** Automatic validation on file edits
+**MCP:** Direct connection to [mcp.zenable.app](https://mcp.zenable.app) with OAuth support
 
 ## Usage
 
@@ -45,6 +45,7 @@ Add to `.claude/settings.json`:
 ```
 
 Or ask the agent:
+
 ```
 Review my API changes for security compliance
 ```
@@ -68,7 +69,14 @@ repos:
 - [Pre-commit Setup](https://docs.zenable.io/integrations/pre-commit/getting-started)
 - [Zenable Docs](https://docs.zenable.io)
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, commit conventions, and release process.
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/) and automated semantic versioning.
+
 ## Support
 
 **Issues:** [GitHub Issues](https://github.com/Zenable-io/ai-guardrails/issues)
+**Discussions:** [GitHub Discussions](https://github.com/Zenable-io/ai-guardrails/discussions)
 **Website:** [zenable.io](https://zenable.io)
