@@ -1,0 +1,76 @@
+---
+name: "CI"
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '47 5 * * 0'
+
+env:
+  python_version: "3.13"
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: 'false'
+      - name: Bootstrap repository
+        uses: ./.github/actions/bootstrap
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: ${{ env.python_version }}
+      - name: Lint
+        run: task -v lint
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: 'false'
+      - name: Bootstrap repository
+        uses: ./.github/actions/bootstrap
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          python-version: ${{ env.python_version }}
+      - name: Validate the pre-commit config
+        run: task -v validate
+      - name: Run the tests
+        run: task -v test
+  finalizer:
+    # This gives us something to set as required in the repo settings. Some projects use dynamic fan-outs using matrix strategies and the fromJSON function, so
+    # you can't hard-code what _should_ run vs not. Having a finalizer simplifies that so you can just check that the finalizer succeeded, and if so, your
+    # requirements have been met
+    # Example: https://x.com/JonZeolla/status/1877344137713766516
+    name: Finalize the pipeline
+    runs-on: ubuntu-24.04
+    # Keep this aligned with the above jobs
+    needs: [lint, test]
+    if: always()  # Ensure it runs even if "needs" fails or is cancelled
+    steps:
+      - name: Check for failed or cancelled jobs
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ||
+                "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "One or more required jobs failed or was cancelled. Marking finalizer as failed."
+            exit 1
+          fi
+      - name: Finalize
+        run: echo "Pipeline complete!"

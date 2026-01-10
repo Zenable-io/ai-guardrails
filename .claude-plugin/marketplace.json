@@ -1,0 +1,32 @@
+{
+  "name": "claude-plugins",
+  "owner": {
+    "name": "Zenable",
+    "url": "https://zenable.io"
+  },
+  "plugins": [
+    {
+      "name": "zenable-guardrails",
+      "version": "1.0.0",
+      "description": "AI coding guardrails with conformance checks, MCP integration, and policy enforcement.",
+      "source": "./plugins/zenable-guardrails",
+      "keywords": [
+        "zenable",
+        "guardrails",
+        "policy-as-code",
+        "conformance",
+        "mcp",
+        "governance",
+        "specifications",
+        "spec-driven development",
+        "context engineering"
+      ],
+      "strict": true
+    }
+  ],
+  "metadata": {
+    "description": "Official Zenable AI Guardrails plugin marketplace for Claude Code",
+    "homepage": "https://docs.zenable.io?utm_source=ai-guardrails&utm_medium=marketplace",
+    "repository": "https://github.com/Zenable-io/ai-guardrails"
+  }
+}

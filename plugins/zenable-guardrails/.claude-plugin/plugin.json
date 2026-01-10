@@ -1,0 +1,28 @@
+{
+  "name": "zenable-guardrails",
+  "version": "1.0.0",
+  "description": "Conformance checks and AI coding guardrails for your repository. Enforces organizational standards, runs policy-as-code validations, and provides context-aware development guidance.",
+  "keywords": [
+    "zenable",
+    "guardrails",
+    "policy-as-code",
+    "conformance",
+    "mcp",
+    "governance",
+    "quality",
+    "security",
+    "specifications",
+    "spec-driven development",
+    "context engineering"
+  ],
+  "homepage": "https://docs.zenable.io",
+  "repository": "https://github.com/Zenable-io/ai-guardrails",
+  "author": {
+    "name": "Zenable",
+    "url": "https://zenable.io"
+  },
+  "commands": "./commands",
+  "skills": "./skills",
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": "./.mcp.json"
+}
