@@ -26,7 +26,7 @@
   ],
   "metadata": {
     "description": "Official Zenable AI Guardrails plugin marketplace for Claude Code",
-    "homepage": "https://docs.zenable.io",
+    "homepage": "https://docs.zenable.io?utm_source=ai-guardrails&utm_medium=marketplace",
     "repository": "https://github.com/Zenable-io/ai-guardrails"
   }
 }
