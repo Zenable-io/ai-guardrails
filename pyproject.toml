@@ -1,6 +1,6 @@
 [project]
 name = "ai-guardrails"
-version = "0.1.0"
+version = "1.0.0"
 description = "AI coding guardrails for Claude Code"
 authors = [
     { name = "Zenable", email = "support@zenable.io" }
