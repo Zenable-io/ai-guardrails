@@ -70,16 +70,18 @@ chore(deps): update pre-commit hooks
 
 2. Make your changes following the code style
 
-3. Ensure tests pass:
+3. Update tests when modifying existing methods or subroutines to ensure they reflect your changes
+
+4. Ensure tests pass:
    ```bash
    task test
    ```
 
-4. Commit using conventional commit format
+5. Commit using conventional commit format
 
-5. Push and create a pull request to `main`
+6. Push and create a pull request to `main`
 
-6. Wait for CI checks to pass and review
+7. Wait for CI checks to pass and review
 
 ## Project Structure
 
@@ -192,6 +194,11 @@ task test
 - YAML: 2-space indentation, explicit start marker (`---`)
 - Markdown: Follow [markdownlint](https://github.com/DavidAnson/markdownlint) rules
 
+## Security Guidelines
+
+- **Data Encryption**: All sensitive data must be encrypted before storing in databases. Use appropriate encryption libraries like `cryptography.fernet.Fernet` or `cryptography.hazmat.primitives.ciphers`
+- **Audit Trails**: When implementing features that track user actions, document the audit trail requirements and data captured
+- **Guardrail Architecture**: Use centralized evaluation functions for guardrail filtering instead of inline status checks
 ## Questions?
 
 - **Issues**: [GitHub Issues](https://github.com/Zenable-io/ai-guardrails/issues)
