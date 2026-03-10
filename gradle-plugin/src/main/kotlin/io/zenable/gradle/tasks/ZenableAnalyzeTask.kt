@@ -12,7 +12,7 @@ import java.io.File
  *
  * Uses `zenable check` with only real CLI flags:
  *   --branch, --base-branch, --base-path, --dry-run,
- *   --skip-ai-review, --skip-semgrep
+ *   --skip-ai-review, --skip-guardrails
  */
 abstract class ZenableAnalyzeTask : DefaultTask() {
 
@@ -53,7 +53,7 @@ abstract class ZenableAnalyzeTask : DefaultTask() {
         }
 
         if (skipGuardrails.getOrElse(false)) {
-            args.add("--skip-semgrep")
+            args.add("--skip-guardrails")
         }
 
         logger.lifecycle("Running Zenable analysis...")

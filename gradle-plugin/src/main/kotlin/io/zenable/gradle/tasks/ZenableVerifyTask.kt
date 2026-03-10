@@ -13,7 +13,7 @@ import java.io.File
  *
  * Uses `zenable check` with only real CLI flags:
  *   --branch, --base-branch, --base-path, --dry-run,
- *   --skip-ai-review, --skip-semgrep
+ *   --skip-ai-review, --skip-guardrails
  *
  * This task is designed to be wired into the `check` lifecycle task.
  */
@@ -56,7 +56,7 @@ abstract class ZenableVerifyTask : DefaultTask() {
         }
 
         if (skipGuardrails.getOrElse(false)) {
-            args.add("--skip-semgrep")
+            args.add("--skip-guardrails")
         }
 
         logger.lifecycle("Running Zenable verification...")
