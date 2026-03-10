@@ -17,27 +17,29 @@ class ZenablePlugin : Plugin<Project> {
 
         // Set defaults
         extension.enabled.convention(true)
-        extension.mode.convention("balanced")
-        extension.failOnSeverity.convention("high")
         extension.wireIntoCheck.convention(false)
         extension.cliPath.convention("")
+        extension.baseBranch.convention("main")
+        extension.skipAiReview.convention(false)
+        extension.skipGuardrails.convention(false)
 
         // Register tasks lazily
         project.tasks.register("zenableAnalyze", ZenableAnalyzeTask::class.java) { task ->
             task.description = "Run Zenable analysis"
             task.group = "verification"
-            task.enabled.set(extension.enabled)
-            task.mode.set(extension.mode)
             task.cliPath.set(extension.cliPath)
+            task.baseBranch.set(extension.baseBranch)
+            task.skipAiReview.set(extension.skipAiReview)
+            task.skipGuardrails.set(extension.skipGuardrails)
         }
 
         project.tasks.register("zenableVerify", ZenableVerifyTask::class.java) { task ->
             task.description = "Verify Zenable guardrails (blocking)"
             task.group = "verification"
-            task.enabled.set(extension.enabled)
-            task.mode.set(extension.mode)
-            task.failOnSeverity.set(extension.failOnSeverity)
             task.cliPath.set(extension.cliPath)
+            task.baseBranch.set(extension.baseBranch)
+            task.skipAiReview.set(extension.skipAiReview)
+            task.skipGuardrails.set(extension.skipGuardrails)
         }
 
         // Optionally wire into check

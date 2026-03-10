@@ -8,47 +8,53 @@ import org.gradle.api.tasks.TaskAction
 import java.io.File
 
 /**
- * Runs Zenable analysis on the project without failing the build.
+ * Runs Zenable check on the project without failing the build.
  *
- * Reports are written to build/reports/zenable/.
+ * Uses `zenable check` with only real CLI flags:
+ *   --branch, --base-branch, --base-path, --dry-run,
+ *   --skip-ai-review, --skip-semgrep
  */
 abstract class ZenableAnalyzeTask : DefaultTask() {
-
-    @get:Input
-    abstract val enabled: Property<Boolean>
-
-    @get:Input
-    abstract val mode: Property<String>
 
     @get:Input
     @get:Optional
     abstract val cliPath: Property<String>
 
+    @get:Input
+    abstract val baseBranch: Property<String>
+
+    @get:Input
+    abstract val skipAiReview: Property<Boolean>
+
+    @get:Input
+    abstract val skipGuardrails: Property<Boolean>
+
     @TaskAction
     fun analyze() {
-        if (!enabled.getOrElse(true)) {
-            logger.lifecycle("Zenable analysis is disabled, skipping")
-            return
-        }
-
         val cli = resolveCliPath()
         if (cli == null) {
             logger.warn("Zenable CLI not found on PATH; skipping analysis")
             return
         }
 
-        val reportDir = File(project.layout.buildDirectory.asFile.get(), "reports/zenable")
-        reportDir.mkdirs()
-
         val args = mutableListOf(
             cli,
             "check",
-            "--source-dir", project.projectDir.absolutePath,
-            "--output-format", "sarif",
-            "--output", File(reportDir, "analysis.sarif").absolutePath,
-            "--build-tool", "gradle",
-            "--mode", mode.getOrElse("balanced"),
+            "--base-path", project.projectDir.absolutePath,
         )
+
+        val branch = baseBranch.getOrElse("main")
+        if (branch.isNotBlank()) {
+            args.addAll(listOf("--base-branch", branch))
+        }
+
+        if (skipAiReview.getOrElse(false)) {
+            args.add("--skip-ai-review")
+        }
+
+        if (skipGuardrails.getOrElse(false)) {
+            args.add("--skip-semgrep")
+        }
 
         logger.lifecycle("Running Zenable analysis...")
         val result = project.exec { spec ->
@@ -59,7 +65,7 @@ abstract class ZenableAnalyzeTask : DefaultTask() {
         if (result.exitValue != 0) {
             logger.warn("Zenable analysis exited with code ${result.exitValue}")
         } else {
-            logger.lifecycle("Zenable analysis complete. Report: ${reportDir.absolutePath}")
+            logger.lifecycle("Zenable analysis complete.")
         }
     }
 
