@@ -63,23 +63,14 @@ chore(deps): update pre-commit hooks
 
 ### Pull Request Process
 
-1. Create a feature branch from `main`:
-   ```bash
-   git checkout -b feat/my-new-feature
-   ```
-
+1. Create a feature branch from `main`: `git checkout -b feat/my-new-feature`
 2. Make your changes following the code style
-
-3. Ensure tests pass:
-   ```bash
-   task test
-   ```
-
+3. Run linters and tests: `task lint && task test`
 4. Commit using conventional commit format
-
 5. Push and create a pull request to `main`
-
 6. Wait for CI checks to pass and review
+
+**Do not commit directly to `main`.**
 
 ## Project Structure
 
