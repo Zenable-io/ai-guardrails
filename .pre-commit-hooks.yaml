@@ -3,5 +3,5 @@
   name: Zenable Conformance Check
   description: Validate files against organizational requirements, security policies, and quality standards
   language: system
-  entry: uvx zenable-mcp check
+  entry: zenable check
   pass_filenames: true
