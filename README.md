@@ -52,6 +52,14 @@ Review my API changes for security compliance
 
 ## Pre-commit Integration
 
+Install the Zenable CLI first:
+
+```bash
+curl -fsSL https://cli.zenable.app/install.sh | bash
+```
+
+Then add the hook:
+
 ```yaml
 # .pre-commit-config.yaml
 repos:

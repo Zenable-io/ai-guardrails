@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uvx zenable-mcp hook"
+            "command": "zenable hook"
           }
         ]
       }
