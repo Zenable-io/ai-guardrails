@@ -1,4 +1,4 @@
-# Zenable OpenCode Guardrails Plugin
+# 🛡️ Zenable OpenCode Guardrails Plugin
 
 Zenable conformance checking plugin for [OpenCode](https://opencode.ai). Automatically runs conformance checks after file edits.
 
@@ -29,9 +29,13 @@ Add to your `opencode.json`:
 
 ## How It Works
 
-The plugin subscribes to OpenCode's `tool.execute.after` hook for file-editing tools (`edit`, `write`, `multiedit`, `apply_patch`) and runs `uvx zenable-mcp hook` after each edit to check conformance.
+The plugin subscribes to OpenCode's `tool.execute.after` hook for file-editing tools (`edit`, `write`, `multiedit`, `apply_patch`) and runs `zenable hook` after each edit to check conformance.
 
 ## Requirements
 
 - [OpenCode](https://opencode.ai) installed
-- `uvx` available on your system (part of [uv](https://docs.astral.sh/uv/))
+- The Zenable CLI installed and on your `PATH`:
+
+  ```bash
+  curl -fsSL https://cli.zenable.app/install.sh | bash
+  ```

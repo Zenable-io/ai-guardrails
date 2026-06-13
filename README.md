@@ -93,8 +93,10 @@ What the plugin wires up:
   review, and **`/triage`** to address unresolved Zenable review comments on the
   current PR/MR.
 
-The hooks shell out to the Zenable CLI. Install it once (the plugin also
-prompts for this):
+The hooks shell out to the Zenable CLI. On first session the plugin installs it
+for you if it's missing — a one-time, no-op-once-installed step, so the hooks
+work without a manual `curl` (requires `curl` or `wget`). To install it ahead of
+time:
 
 ```bash
 curl -fsSL https://cli.zenable.app/install.sh | bash
@@ -123,6 +125,38 @@ the full list of supported editors.
 
 Deep dive: [MCP getting started](https://www.zenable.app/docs/integrations/mcp/getting-started) ·
 [Zenable CLI reference](https://www.zenable.app/docs/integrations/zenable/commands)
+
+### OpenCode
+
+[OpenCode](https://opencode.ai) gets the same remote MCP plus an automatic
+post-edit review, but it can only run the hook through its plugin API — so it
+additionally loads a small plugin,
+[`plugins/zenable-opencode-guardrails`](plugins/zenable-opencode-guardrails).
+The CLI wires up both for you:
+
+```bash
+zenable install opencode
+```
+
+Prefer to configure it by hand? Add the MCP server and plugin to `opencode.json`:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "zenable": {
+      "type": "remote",
+      "url": "https://mcp.zenable.app/"
+    }
+  },
+  "plugin": ["@zenable-io/opencode-guardrails"]
+}
+```
+
+On load, the plugin also bootstraps the Zenable CLI if it's missing — the same
+one-time, no-op-once-installed step as the Claude Code plugin.
+
+Deep dive: [OpenCode integration](https://www.zenable.app/docs/integrations/mcp/ide/opencode)
 
 ### Pre-commit
 
@@ -181,6 +215,7 @@ Everything below redirects to [docs.zenable.io](https://docs.zenable.io):
 - [Requirements & guardrails](https://www.zenable.app/docs/requirements-and-guardrails)
 - [MCP getting started](https://www.zenable.app/docs/integrations/mcp/getting-started)
 - [Claude Code integration](https://www.zenable.app/docs/integrations/mcp/ide/claude-code)
+- [OpenCode integration](https://www.zenable.app/docs/integrations/mcp/ide/opencode)
 - [Pre-commit setup](https://www.zenable.app/docs/integrations/pre-commit/getting-started)
 - [GitLab reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/gitlab) ·
   [GitHub reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/github)

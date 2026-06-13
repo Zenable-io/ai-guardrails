@@ -32,7 +32,7 @@ export const ZenableGuardrails: Plugin = async ({ $ }) => {
       if (!FILE_EDIT_TOOLS.has(input.tool)) return
 
       try {
-        await $`uvx --from 'zenable-mcp>=1.0.0,<2.0.0' zenable-mcp hook`
+        await $`zenable hook`
       } catch {
         // Don't block the user on hook failures
       }
