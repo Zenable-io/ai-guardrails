@@ -24,6 +24,24 @@ const FILE_EDIT_TOOLS = new Set([
 ])
 
 export const ZenableGuardrails: Plugin = async ({ $ }) => {
+  // Best-effort: ensure the Zenable CLI is present before the hook fires.
+  // Delegates to the canonical installer (cli.zenable.app/install.sh), which
+  // verifies the download (checksum + signature) and wires up integrations.
+  // No-op once installed; all failures are swallowed so plugin load never breaks.
+  try {
+    await $`sh -c 'command -v zenable >/dev/null 2>&1'`
+  } catch {
+    try {
+      await $`curl -fsSL https://cli.zenable.app/install.sh | bash`
+    } catch {
+      try {
+        await $`wget -qO- https://cli.zenable.app/install.sh | bash`
+      } catch {
+        // Neither worked; the hook below no-ops until the CLI is installed.
+      }
+    }
+  }
+
   return {
     // tool.execute.after is a direct hook called via Plugin.trigger(), not a bus event.
     // Signature: (input: { tool: string; sessionID: string; callID: string; args: any },
