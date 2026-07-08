@@ -10,13 +10,27 @@ Address unresolved review comments from the Zenable AI guardrails bot on the pul
 
 ## Prerequisites
 
-zenable CLI location: !`which zenable 2>/dev/null || echo "NOT INSTALLED"`
+This skill requires the Zenable CLI. Check whether it's installed:
 
-If the above shows "NOT INSTALLED", install it first:
+zenable CLI location: !`command -v zenable 2>/dev/null || echo "NOT INSTALLED"`
+
+If the above shows "NOT INSTALLED", install it by running this skill's bundled
+installer (idempotent — a no-op once the CLI is present):
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/install-zenable.sh"
+bash "${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/install-zenable.sh"
 ```
+
+The script delegates to the canonical installer at
+[cli.zenable.app/install.sh](https://cli.zenable.app), which verifies the
+download (checksum + signature) before installing. It needs `curl` or `wget`.
+If you'd rather install manually, run:
+
+```bash
+curl -fsSL https://cli.zenable.app/install.sh | bash
+```
+
+After installing, confirm `command -v zenable` resolves before continuing.
 
 ## Instructions
 
