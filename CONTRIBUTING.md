@@ -106,8 +106,6 @@ ai-guardrails/
 │       └── skills/
 │           └── guardrails-reviewer/
 │               └── SKILL.md      # Autonomous skill
-├── scripts/
-│   └── update_versions.py        # Version synchronization
 ├── tests/
 │   └── zenable_guardrails/
 │       └── validate_structure.py # Plugin validation
