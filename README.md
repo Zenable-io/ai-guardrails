@@ -68,7 +68,7 @@ Install the plugin from this repo's marketplace:
       "source": {"source": "github", "repo": "Zenable-io/ai-guardrails"}
     }
   },
-  "enabledPlugins": ["zenable-guardrails@claude-plugins"]
+  "enabledPlugins": {"zenable-guardrails@claude-plugins": true}
 }
 ```
 
