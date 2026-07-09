@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "zenable": {
-      "type": "http",
-      "url": "https://mcp.zenable.app"
-    }
-  }
-}

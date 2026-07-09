@@ -98,14 +98,16 @@ ai-guardrails/
 │   └── zenable-guardrails/
 │       ├── .claude-plugin/
 │       │   └── plugin.json       # Plugin metadata
-│       ├── .mcp.json             # MCP server configuration
-│       ├── commands/
-│       │   └── check.md          # /check slash command
+│       ├── commands/            # Slash commands (feat, debug, rebase, …)
 │       ├── hooks/
 │       │   └── hooks.json        # Event hooks
+│       ├── scripts/
+│       │   └── bootstrap.sh      # SessionStart CLI bootstrap
 │       └── skills/
-│           └── guardrails-reviewer/
-│               └── SKILL.md      # Autonomous skill
+│           ├── guardrails-reviewer/
+│           │   └── SKILL.md      # Autonomous conformance reviewer
+│           └── triage/
+│               └── SKILL.md      # /triage review-comment resolver
 ├── tests/
 │   └── zenable_guardrails/
 │       └── validate_structure.py # Plugin validation
@@ -180,7 +182,7 @@ task test
 
 # Install in Claude Code (from repo root)
 /plugin marketplace add ./
-/plugin install zenable-guardrails@claude-plugins
+/plugin install zenable-guardrails@zenable-ai-guardrails
 ```
 
 ## Code Style

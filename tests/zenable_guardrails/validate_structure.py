@@ -17,7 +17,6 @@ def main() -> int:
     # Check required files exist
     required_files = [
         ".claude-plugin/plugin.json",
-        ".mcp.json",
         "hooks/hooks.json",
     ]
 
@@ -27,6 +26,19 @@ def main() -> int:
             print(f"❌ Missing required file: {file}")
             return 1
         print(f"✓ Found: {file}")
+
+    # Claude Code auto-discovers a plugin-root `.mcp.json` and would install the
+    # MCP server from it. The MCP server needs a one-time interactive login
+    # (`zenable install mcp claude-code`) that the user runs themselves, so it
+    # must not be bundled. A live `.mcp.json` must never exist here.
+    live_mcp = plugin_root / ".mcp.json"
+    if live_mcp.is_file():
+        print(
+            "❌ .mcp.json must not exist: it would auto-install the MCP server, "
+            "which needs a user-initiated `zenable install mcp claude-code` login."
+        )
+        return 1
+    print("✓ No live .mcp.json (MCP server is CLI-installed, by design)")
 
     # Check required directories exist
     required_dirs = [
@@ -45,7 +57,6 @@ def main() -> int:
     # Validate JSON files
     json_files = [
         ".claude-plugin/plugin.json",
-        ".mcp.json",
         "hooks/hooks.json",
     ]
 
@@ -89,7 +100,7 @@ def main() -> int:
     print()
     print("You can now install this plugin with:")
     print("  /plugin marketplace add Zenable-io/ai-guardrails")
-    print("  /plugin install zenable-guardrails@claude-plugins")
+    print("  /plugin install zenable-guardrails@zenable-ai-guardrails")
 
     return 0
 
