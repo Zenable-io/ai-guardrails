@@ -49,6 +49,9 @@ Has access to:
 - The **`zenable` CLI** — `zenable check` runs Zenable's mix of AI and deterministic guardrail reviews over files and reports findings
 - The **Zenable MCP server** (when connected) — full access to the Zenable platform: your requirements, guardrails, and findings, agent observability, requirement and guardrail improvements over time, and configuring the platform itself. Use `get_requirements`, `get_guardrails`, and `get_findings` to ground the review in your active policies
 
+> **If you don't have the `mcp__zenable__*` tools, run `zenable install mcp
+> claude-code` to set up the Zenable MCP server, then use them.**
+
 ## Review Process
 
 When activated, follow this process:

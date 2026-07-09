@@ -56,7 +56,7 @@ Install the plugin from this repo's marketplace:
 
 ```bash
 /plugin marketplace add Zenable-io/ai-guardrails
-/plugin install zenable-guardrails@claude-plugins
+/plugin install zenable-guardrails@zenable-ai-guardrails
 ```
 
 **Team setup** — commit this to `.claude/settings.json` so everyone gets it:
@@ -64,21 +64,18 @@ Install the plugin from this repo's marketplace:
 ```json
 {
   "extraKnownMarketplaces": {
-    "claude-plugins": {
+    "zenable-ai-guardrails": {
       "source": {"source": "github", "repo": "Zenable-io/ai-guardrails"}
     }
   },
-  "enabledPlugins": {"zenable-guardrails@claude-plugins": true}
+  "enabledPlugins": {"zenable-guardrails@zenable-ai-guardrails": true}
 }
 ```
 
-What the plugin wires up:
+On first session the plugin sets itself up — it installs the `zenable` CLI and
+wires the post-edit hooks for you, so guardrail review starts running on every
+edit with nothing else to configure. What you get:
 
-- **MCP** — a direct connection to [`mcp.zenable.app`](https://mcp.zenable.app)
-  (OAuth) that opens the whole Zenable platform to your agent: your requirements,
-  guardrails, and findings; agent observability; how your requirements and
-  guardrails improve over time; and configuring the platform itself — no web
-  browser required.
 - **Hooks** — automatic guardrail review after each file edit. Violations are
   returned to the agent to fix in place.
 - **Skills** — a *guardrails reviewer* for autonomous, requirement-aware code
@@ -86,13 +83,14 @@ What the plugin wires up:
   current PR/MR.
 - **CLI** — the local engine behind the hooks and skills, running deterministic,
   token-free guardrail checks.
+- **MCP** — full platform access for your agent: your requirements, guardrails,
+  and findings, agent observability, how your requirements and guardrails
+  improve over time, and configuring the platform itself. Connect it with one
+  command:
 
-The hooks call the `zenable` CLI directly, so install it once to activate them
-(or run `/triage`, which installs it for you):
-
-```bash
-curl -fsSL https://cli.zenable.app/install.sh | bash
-```
+  ```bash
+  zenable install mcp claude-code
+  ```
 
 Deep dive: [Claude Code integration](https://www.zenable.app/docs/integrations/mcp/ide/claude-code)
 
@@ -110,10 +108,10 @@ zenable install codex        # antigravity, kiro, goose, devin-desktop, …
 zenable install              # auto-detect every installed editor
 ```
 
-The CLI writes the MCP server config and, where the editor supports it, the
-post-edit hook into that editor's own config files. Add `--project` to scope it
-to the current repo or `--dry-run` to preview. Run `zenable install --help` for
-the full list of supported editors.
+The CLI writes the MCP server config — handling the required out-of-band login —
+and, where the editor supports it, the post-edit hook into that editor's own
+config files. Add `--project` to scope it to the current repo or `--dry-run` to
+preview. Run `zenable install --help` for the full list of supported editors.
 
 Deep dive: [MCP getting started](https://www.zenable.app/docs/integrations/mcp/getting-started) ·
 [Zenable CLI reference](https://www.zenable.app/docs/integrations/zenable/commands)
@@ -165,6 +163,13 @@ SARIF output is uploaded as a GitLab SAST report. See the
 for the full input reference, or wire up the
 [GitLab merge-request reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/gitlab)
 for automated review comments on every MR.
+
+## Why the MCP server isn't bundled
+
+We don't bundle the MCP server because, to support [CIMD (Client ID Metadata Documents)](https://blog.modelcontextprotocol.io/posts/client_registration/#solution-client-id-metadata-documents-cimd),
+users need to authenticate out of band their first time. If you'd like to talk
+about this more, or have a solution to that problem, our founder would love to
+hear from you — [send him a message](https://linkedin.com/in/jonzeolla).
 
 ## Documentation
 
