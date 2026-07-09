@@ -92,9 +92,11 @@ What the plugin wires up:
 - **Skills** — a *guardrails reviewer* for autonomous, requirement-aware code
   review, and **`/triage`** to address unresolved Zenable review comments on the
   current PR/MR.
+- **CLI** — the local engine behind the hooks and skills, running deterministic,
+  token-free guardrail checks.
 
-The hooks shell out to the Zenable CLI. Install it once (the plugin also
-prompts for this):
+The hooks call the `zenable` CLI directly, so install it once to activate them
+(or run `/triage`, which installs it for you):
 
 ```bash
 curl -fsSL https://cli.zenable.app/install.sh | bash

@@ -8,7 +8,7 @@
     {
       "name": "zenable-guardrails",
       "version": "1.0.0",
-      "description": "Enforce your organization's coding standards on AI-written code, with a durable record of what was checked — via MCP, post-edit review, and policy-as-code.",
+      "description": "Make your coding agents automatically self-improve. Enforce your coding standards while your developers keep using whatever IDE, model, or agent they want.",
       "source": "./plugins/zenable-guardrails",
       "keywords": [
         "zenable",
