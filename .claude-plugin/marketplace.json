@@ -8,7 +8,7 @@
     {
       "name": "zenable-guardrails",
       "version": "1.0.0",
-      "description": "AI coding guardrails with conformance checks, MCP integration, and policy enforcement.",
+      "description": "Enforce your organization's coding standards on AI-written code, with a durable record of what was checked — via MCP, post-edit review, and policy-as-code.",
       "source": "./plugins/zenable-guardrails",
       "keywords": [
         "zenable",
