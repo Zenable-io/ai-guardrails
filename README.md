@@ -31,7 +31,7 @@ Add to `.claude/settings.json`:
 ## What's Included
 
 **Command:** `/check` - Conformance checks, validation, and requirements display
-**Skill:** Guardrails reviewer for autonomous conformance-focused code review
+**Skills:** Guardrails reviewer for autonomous conformance-focused code review; `/triage` to address unresolved Zenable AI review comments on the current PR/MR
 **Hooks:** Automatic validation on file edits
 **MCP:** Direct connection to [mcp.zenable.app](https://mcp.zenable.app) with OAuth support
 
