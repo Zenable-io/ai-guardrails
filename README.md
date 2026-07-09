@@ -12,7 +12,7 @@ agent looked.
 
 This repository is the home for Zenable's developer-side integrations: the
 Claude Code plugin, a GitLab CI/CD component, a pre-commit hook, and drop-in
-configuration for every other AI editor. Your requirements travel with you
+configuration for plenty of different agentic IDE. Your requirements travel with you
 across all of them.
 
 > **This README is the quick, self-contained tour.** Full product documentation
