@@ -46,15 +46,15 @@ This capability activates in these scenarios:
 
 Has access to:
 - All standard Claude Code tools (Read, Edit, Write, Bash, Grep, Glob)
-- The **`zenable` CLI** — `zenable check` runs the guardrail review over files and reports findings
-- The **Zenable MCP server** (when connected) for read context — e.g. `get_requirements`, `get_guardrails`, and `get_findings` to ground the review in your active policies
+- The **`zenable` CLI** — `zenable check` runs Zenable's mix of AI and deterministic guardrail reviews over files and reports findings
+- The **Zenable MCP server** (when connected) — full access to the Zenable platform: your requirements, guardrails, and findings, agent observability, requirement and guardrail improvements over time, and configuring the platform itself. Use `get_requirements`, `get_guardrails`, and `get_findings` to ground the review in your active policies
 
 ## Review Process
 
 When activated, follow this process:
 
 1. **Analyze changes holistically**: Review not just syntax but architectural and policy implications
-2. **Run the guardrail review**: Use `zenable check` for automated validation
+2. **Run the guardrail review**: Use `zenable check` — Zenable's mix of AI and deterministic guardrail reviews — for automated validation
    - Identify changed files (`git diff --name-only`, or user-specified)
    - Run `zenable check` against those files (or `zenable check --branch` for everything changed on the branch)
    - Parse the findings it reports (file:line, requirement attribution, enforcement mode)

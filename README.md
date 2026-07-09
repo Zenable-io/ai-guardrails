@@ -85,8 +85,10 @@ Install the plugin from this repo's marketplace:
 What the plugin wires up:
 
 - **MCP** — a direct connection to [`mcp.zenable.app`](https://mcp.zenable.app)
-  (OAuth) so the agent can read your requirements, guardrails, and findings and
-  author new ones.
+  (OAuth) that opens the whole Zenable platform to your agent: your requirements,
+  guardrails, and findings; agent observability; how your requirements and
+  guardrails improve over time; and configuring the platform itself — no web
+  browser required.
 - **Hooks** — automatic guardrail review after each file edit. Violations are
   returned to the agent to fix in place.
 - **Skills** — a *guardrails reviewer* for autonomous, requirement-aware code
