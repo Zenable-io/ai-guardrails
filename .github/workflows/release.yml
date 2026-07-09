@@ -44,6 +44,25 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           git_committer_name: "Zenable Automation"
           git_committer_email: "automation@zenable.io"
+          # Tag-only: commit=false leaves main untouched (the push is a no-op the
+          # branch ruleset ignores) while the tag still pushes and cuts the release.
+          commit: false
+          tag: true
+          push: true
+          vcs_release: true
+
+      - name: Move the floating major-version and latest tags
+        # Floating tags (like GitHub Actions): v<major> tracks the latest release
+        # on its major line, `latest` tracks the newest overall. Skip prereleases.
+        if: steps.release.outputs.released == 'true' && steps.release.outputs.is_prerelease == 'false'
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          SHA: ${{ steps.release.outputs.commit_sha }}
+        run: |
+          major="v${VERSION%%.*}"
+          git tag -f "$major" "$SHA"
+          git tag -f latest "$SHA"
+          git push -f origin "refs/tags/$major" "refs/tags/latest"
 
       - name: Summary
         if: steps.release.outputs.released == 'true'
