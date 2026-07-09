@@ -21,36 +21,26 @@ across all of them.
 
 ## How it works
 
-- **Requirements** — your standards, written in plain English ("The system
-  shall not log secrets"). They're versioned and scoped, so a rule applies only
-  where it should — and they cover more than security: functional, performance,
-  and product rules run in the same pass.
-- **Guardrails** — the automated enforcement Zenable generates for each
-  requirement: deterministic static-analysis rules (Semgrep/OpenGrep, and other
-  engines) *plus* AI review for the things rules can't catch. The deterministic
-  checks are pre-fetched and run locally, so they add effectively no wall-clock
-  time and cost no inference.
-- **Findings** — every violation, reported on the exact file and line and
-  attributed back to the requirement that produced it. The deterministic pass
-  doesn't skip or forget, so the result is the evidence an audit asks for.
+You describe a standard once in plain English; Zenable turns it into automated
+guardrails — a mix of deterministic static analysis and AI review — that enforce
+it everywhere your code moves: in the editor as your agent writes, and again in
+pre-commit and CI. The payoff:
 
-Enforcement runs in two places:
-
-- **As your AI writes code** — a post-edit hook reviews each change in your
-  editor and feeds violations straight back to the coding agent, so it fixes
-  them in the same turn.
-- **In your pipeline and before commit** — the same review runs in pre-commit,
-  in GitLab CI, and as automated reviews on pull/merge requests.
+- **Adopt AI at full speed, stay audit-ready** — every finding is recorded on
+  the exact file and line and attributed to the requirement behind it: the
+  evidence an audit asks for, not a claim that an agent looked.
+- **Fixed in the same turn** — violations feed straight back to the coding agent
+  as it works, so they're resolved before they land.
+- **No cost, no friction** — deterministic checks are pre-fetched and run
+  locally, adding effectively no wall-clock time and no inference cost, with no
+  change to the IDE or agent your developers already use.
 
 Over time Zenable learns from the signals your team already produces — fixes, PR
 activity, agent and human feedback, false positives — and proposes improvements
 to the requirements and guardrails themselves. Those proposals are governed by
 policies you set, with a human kept in the loop wherever you require one.
 
-Everything authenticates to the hosted platform at
-[`mcp.zenable.app`](https://mcp.zenable.app) over OAuth — no long-lived secrets.
-
-Learn more: [How Zenable works](https://www.zenable.app/docs/how-it-works) ·
+Deep dive: [How Zenable works](https://www.zenable.app/docs/how-it-works) ·
 [Requirements & guardrails](https://www.zenable.app/docs/requirements-and-guardrails)
 
 ## Integrations
