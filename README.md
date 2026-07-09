@@ -164,13 +164,6 @@ for the full input reference, or wire up the
 [GitLab merge-request reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/gitlab)
 for automated review comments on every MR.
 
-## Why the MCP server isn't bundled
-
-We don't bundle the MCP server because, to support [CIMD (Client ID Metadata Documents)](https://blog.modelcontextprotocol.io/posts/client_registration/#solution-client-id-metadata-documents-cimd),
-users need to authenticate out of band their first time. If you'd like to talk
-about this more, or have a solution to that problem, our founder would love to
-hear from you — [send him a message](https://linkedin.com/in/jonzeolla).
-
 ## Documentation
 
 Everything below redirects to [docs.zenable.io](https://docs.zenable.io):
