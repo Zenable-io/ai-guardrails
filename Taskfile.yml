@@ -84,10 +84,10 @@ tasks:
   test:
     desc: Run the project tests
     cmds:
-      - task: test-zenable-guardrails
+      - task: test-plugin
 
-  test-zenable-guardrails:
-    desc: Validate the zenable-guardrails plugin structure
+  test-plugin:
+    desc: Validate the z plugin structure
     cmds:
       - '{{.RUN_SCRIPT}} python tests/zenable_guardrails/validate_structure.py'
 

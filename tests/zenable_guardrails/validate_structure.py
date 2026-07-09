@@ -10,7 +10,7 @@ def main() -> int:
     """Validate the Zenable plugin structure."""
     # Find plugin root (2 levels up from this script)
     script_path = Path(__file__).resolve()
-    plugin_root = script_path.parent.parent.parent / "plugins" / "zenable-guardrails"
+    plugin_root = script_path.parent.parent.parent / "plugins" / "z"
 
     print("Validating Zenable plugin structure...")
 
@@ -100,7 +100,7 @@ def main() -> int:
     print()
     print("You can now install this plugin with:")
     print("  /plugin marketplace add Zenable-io/ai-guardrails")
-    print("  /plugin install zenable-guardrails@zenable-ai-guardrails")
+    print("  /plugin install z@zenable")
 
     return 0
 

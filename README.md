@@ -56,7 +56,7 @@ Install the plugin from this repo's marketplace:
 
 ```bash
 /plugin marketplace add Zenable-io/ai-guardrails
-/plugin install zenable-guardrails@zenable-ai-guardrails
+/plugin install z@zenable
 ```
 
 **Team setup** — commit this to `.claude/settings.json` so everyone gets it:
@@ -64,11 +64,11 @@ Install the plugin from this repo's marketplace:
 ```json
 {
   "extraKnownMarketplaces": {
-    "zenable-ai-guardrails": {
+    "zenable": {
       "source": {"source": "github", "repo": "Zenable-io/ai-guardrails"}
     }
   },
-  "enabledPlugins": {"zenable-guardrails@zenable-ai-guardrails": true}
+  "enabledPlugins": {"z@zenable": true}
 }
 ```
 
