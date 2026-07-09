@@ -46,7 +46,7 @@ This capability activates in these scenarios:
 
 Has access to:
 - All standard Claude Code tools (Read, Edit, Write, Bash, Grep, Glob)
-- The **`zenable` CLI** (via Bash) — `zenable check` runs the guardrail review over files and reports findings
+- The **`zenable` CLI** — `zenable check` runs the guardrail review over files and reports findings
 - The **Zenable MCP server** (when connected) for read context — e.g. `get_requirements`, `get_guardrails`, and `get_findings` to ground the review in your active policies
 
 ## Review Process
