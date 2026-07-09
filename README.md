@@ -172,6 +172,38 @@ for the full input reference, or wire up the
 [GitLab merge-request reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/gitlab)
 for automated review comments on every MR.
 
+### Gradle plugin
+
+> **Preview.** The `io.zenable.gradle` plugin lives in
+> [`gradle-plugin/`](gradle-plugin) and is early-stage (`0.1.0`).
+
+Run the guardrail review as part of your Gradle build. Apply the plugin, then
+use its tasks:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    id("io.zenable.gradle") version "0.1.0"
+}
+
+zenable {
+    wireIntoCheck.set(true)   // make `gradle check` depend on zenableVerify
+    baseBranch.set("main")    // branch to diff against
+}
+```
+
+It registers two tasks (both shell out to the Zenable CLI):
+
+- **`zenableAnalyze`** — non-blocking review; reports findings without failing
+  the build.
+- **`zenableVerify`** — blocking review; fails the build on enforced findings.
+  Set `wireIntoCheck = true` to hang it off the standard `check` lifecycle task.
+
+The `zenable { }` DSL also exposes `enabled`, `cliPath` (auto-detected when
+empty), `skipAiReview`, and `skipGuardrails`.
+
+Deep dive: [Zenable CLI reference](https://www.zenable.app/docs/integrations/zenable/commands)
+
 ## Documentation
 
 Everything below redirects to [docs.zenable.io](https://docs.zenable.io):
