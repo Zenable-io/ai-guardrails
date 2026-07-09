@@ -70,6 +70,31 @@ repos:
 ```
 
 
+## GitLab CI/CD Component
+
+Run conformance checks on every GitLab pipeline. Authenticates to Zenable
+via GitLab's native OIDC ID tokens — no long-lived secrets required.
+
+```yaml
+# .gitlab-ci.yml
+include:
+  - component: gitlab.com/zenable/ai-guardrails/check@~latest
+    inputs:
+      paths: ""              # empty = check files changed on this branch
+      base_branch: main
+      format: "text,sarif=zenable.sarif"
+```
+
+Pin to a specific release for reproducibility:
+
+```yaml
+include:
+  - component: gitlab.com/zenable/ai-guardrails/check@1.0.0
+```
+
+See the [GitLab CI/CD Catalog](https://gitlab.com/explore/catalog/zenable/ai-guardrails)
+for the full input reference.
+
 ## Documentation
 
 - [Claude Code Integration](https://docs.zenable.io/integrations/mcp/ide/claude-code)

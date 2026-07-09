@@ -1,0 +1,34 @@
+---
+# GitLab CI for the zenable/ai-guardrails CI/CD component catalog project.
+#
+# This pipeline only runs on GitLab.com — the GitHub repo is the canonical
+# source of truth (see CONTRIBUTING.md). When a `v*` tag is mirrored to the
+# GitLab remote, the release job below publishes the component to the catalog.
+
+stages:
+  - test
+  - release
+
+# Self-test: include the component locally and run it against this repo.
+# Exercises the full install + login + check path on every pipeline.
+include:
+  - local: templates/check.yml
+    inputs:
+      stage: test
+      paths: README.md
+
+# Publish a catalog release on annotated semver tags (matches the format
+# produced by python-semantic-release on the upstream GitHub repo).
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
+  script:
+    - echo "Publishing component release $CI_COMMIT_TAG to the CI/CD catalog"
+  release:
+    tag_name: $CI_COMMIT_TAG
+    description: |
+      Zenable AI Guardrails — GitLab CI/CD component release $CI_COMMIT_TAG.
+      See https://github.com/Zenable-io/ai-guardrails/releases/tag/$CI_COMMIT_TAG
+      for the full changelog.
