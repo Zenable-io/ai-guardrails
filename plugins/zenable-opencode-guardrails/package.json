@@ -1,0 +1,12 @@
+{
+  "name": "@zenable-io/opencode-guardrails",
+  "version": "1.0.0",
+  "description": "Zenable guardrails plugin for OpenCode",
+  "main": "src/index.ts",
+  "type": "module",
+  "keywords": ["opencode", "zenable", "guardrails", "plugin"],
+  "repository": "https://github.com/Zenable-io/ai-guardrails",
+  "dependencies": {
+    "@opencode-ai/plugin": "latest"
+  }
+}
