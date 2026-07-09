@@ -4,7 +4,7 @@ import type { Plugin } from "@opencode-ai/plugin"
  * Zenable Guardrails Plugin for OpenCode
  *
  * Subscribes to tool.execute.after hook for file-editing tools and runs
- * Zenable conformance checks automatically.
+ * the Zenable guardrail review automatically.
  *
  * References:
  *   Plugin API: https://opencode.ai/docs/plugins/

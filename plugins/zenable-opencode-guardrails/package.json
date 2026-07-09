@@ -1,10 +1,10 @@
 {
   "name": "@zenable-io/opencode-guardrails",
   "version": "1.0.0",
-  "description": "Zenable conformance checking plugin for OpenCode",
+  "description": "Zenable guardrails plugin for OpenCode",
   "main": "src/index.ts",
   "type": "module",
-  "keywords": ["opencode", "zenable", "guardrails", "conformance", "plugin"],
+  "keywords": ["opencode", "zenable", "guardrails", "plugin"],
   "repository": "https://github.com/Zenable-io/ai-guardrails",
   "dependencies": {
     "@opencode-ai/plugin": "latest"

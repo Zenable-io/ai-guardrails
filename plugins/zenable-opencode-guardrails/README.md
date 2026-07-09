@@ -1,6 +1,6 @@
 # 🛡️ Zenable OpenCode Guardrails Plugin
 
-Zenable conformance checking plugin for [OpenCode](https://opencode.ai). Automatically runs conformance checks after file edits.
+Zenable guardrails plugin for [OpenCode](https://opencode.ai). Automatically reviews each file edit against your requirements — deterministic policy-as-code plus AI review — and feeds any findings back to the agent.
 
 ## Installation
 
@@ -29,7 +29,7 @@ Add to your `opencode.json`:
 
 ## How It Works
 
-The plugin subscribes to OpenCode's `tool.execute.after` hook for file-editing tools (`edit`, `write`, `multiedit`, `apply_patch`) and runs `zenable hook` after each edit to check conformance.
+The plugin subscribes to OpenCode's `tool.execute.after` hook for file-editing tools (`edit`, `write`, `multiedit`, `apply_patch`) and runs `zenable hook` after each edit to review the change against your guardrails.
 
 On load, the plugin also ensures the Zenable CLI is present: if `zenable` isn't on your `PATH`, it installs it from [cli.zenable.app](https://cli.zenable.app) (the installer verifies the download and wires up integrations). This is a one-time, no-op-once-installed step — you don't need to `curl` anything yourself.
 
