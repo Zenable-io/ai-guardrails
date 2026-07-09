@@ -1,15 +1,15 @@
 {
-  "name": "zenable-ai-guardrails",
+  "name": "zenable",
   "owner": {
     "name": "Zenable",
     "url": "https://zenable.io"
   },
   "plugins": [
     {
-      "name": "zenable-guardrails",
-      "version": "1.0.1",
+      "name": "z",
+      "version": "1.1.0",
       "description": "Make your coding agents automatically self-improve. Enforce your coding standards while your developers keep using whatever IDE, model, or agent they want.",
-      "source": "./plugins/zenable-guardrails",
+      "source": "./plugins/z",
       "keywords": [
         "zenable",
         "guardrails",

@@ -95,7 +95,7 @@ ai-guardrails/
 │       ├── semantic-release.yml  # Automated releases
 │       └── update.yml            # Dependency updates
 ├── plugins/
-│   └── zenable-guardrails/
+│   └── z/
 │       ├── .claude-plugin/
 │       │   └── plugin.json       # Plugin metadata
 │       ├── commands/            # Slash commands (feat, debug, rebase, …)
@@ -120,7 +120,7 @@ ai-guardrails/
 
 ### Adding a New Command
 
-1. Create `plugins/zenable-guardrails/commands/my-command.md`:
+1. Create `plugins/z/commands/my-command.md`:
    ```markdown
    ---
    description: Brief description of what this command does
@@ -138,7 +138,7 @@ ai-guardrails/
 
 ### Adding a New Skill
 
-1. Create `plugins/zenable-guardrails/skills/my-skill/SKILL.md`:
+1. Create `plugins/z/skills/my-skill/SKILL.md`:
    ```yaml
    ---
    name: my-skill
@@ -157,7 +157,7 @@ ai-guardrails/
 
 ### Modifying Hooks
 
-Edit `plugins/zenable-guardrails/hooks/hooks.json`:
+Edit `plugins/z/hooks/hooks.json`:
 ```json
 {
   "hooks": {
@@ -182,7 +182,7 @@ task test
 
 # Install in Claude Code (from repo root)
 /plugin marketplace add ./
-/plugin install zenable-guardrails@zenable-ai-guardrails
+/plugin install z@zenable
 ```
 
 ## Code Style
