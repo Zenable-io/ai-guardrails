@@ -8,7 +8,7 @@
     {
       "name": "zenable-guardrails",
       "version": "1.0.0",
-      "description": "AI coding guardrails with conformance checks, MCP integration, and policy enforcement.",
+      "description": "Make your coding agents automatically self-improve. Enforce your coding standards while your developers keep using whatever IDE, model, or agent they want.",
       "source": "./plugins/zenable-guardrails",
       "keywords": [
         "zenable",
