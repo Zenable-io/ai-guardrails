@@ -63,6 +63,8 @@ tasks:
     cmds:
       - uv tool upgrade --all
       - uv tool run pre-commit autoupdate --freeze --jobs 4
+      # Pin the README pre-commit example to our latest major tag (v1 -> v2 on a v2 release)
+      - ./scripts/pin-precommit-rev.sh
       - uv lock --upgrade
       - task: init-uv
         vars:
