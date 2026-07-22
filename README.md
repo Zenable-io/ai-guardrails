@@ -130,7 +130,7 @@ Then add the hook to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Zenable-io/ai-guardrails
-    rev: v1
+    rev: v2
     hooks:
       - id: zenable-check
 ```
