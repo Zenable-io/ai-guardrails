@@ -79,8 +79,9 @@ edit with nothing else to configure. What you get:
 - **Hooks** — automatic guardrail review after each file edit. Violations are
   returned to the agent to fix in place.
 - **Skills** — a *guardrails reviewer* for autonomous, requirement-aware code
-  review, and **`/triage`** to address unresolved Zenable review comments on the
-  current PR/MR.
+  review, **`/z:setup`** to onboard a codebase by turning the standards you've
+  already written down into scoped Zenable requirements, and **`/triage`** to
+  address unresolved Zenable review comments on the current PR/MR.
 - **CLI** — the local engine behind the hooks and skills, running deterministic,
   token-free guardrail checks.
 - **MCP** — full platform access for your agent: your requirements, guardrails,
