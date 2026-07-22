@@ -32,8 +32,8 @@ tasks:
       # --all-extras: Only installs optional dependencies which are depended on in the **current** project's pyproject.toml
       - uv sync --frozen --all-extras {{if not .DEV_DEPS}}--no-dev{{end}} {{if .DEBUG}}-v{{end}}
 
-  init-pre-commit:
-    desc: Setup pre-commit
+  init-prek:
+    desc: Setup prek, a drop-in pre-commit replacement that resolves hook environments far faster
     internal: true
     sources:
       - .pre-commit-config.yaml
@@ -42,9 +42,11 @@ tasks:
       # https://yaml.org/spec/1.2.2/#691-node-tags
       - '! test -d .git'
     cmds:
-      - uv tool install pre-commit
+      # --exclude-newer gives a freshly published (potentially compromised) release time to be caught before we pull it in
+      - uv tool install prek --exclude-newer "7 days"
       # Don't run this in pipelines
-      - '{{if ne .GITHUB_ACTIONS "true"}}{{.RUN_SCRIPT}} pre-commit install{{else}}echo "Detected a github actions pipeline; skipping the pre-commit install"{{end}}'
+      # --overwrite replaces any pre-commit-generated shim outright; without it prek keeps the old one as .legacy and runs both on every commit
+      - '{{if ne .GITHUB_ACTIONS "true"}}prek install --overwrite{{else}}echo "Detected a github actions pipeline; skipping the prek install"{{end}}'
 
   init:
     desc: Initialize the repo for local use; intended to be run after git clone
@@ -52,7 +54,7 @@ tasks:
       - task: init-uv
         vars:
           DEV_DEPS: true
-      - task: init-pre-commit
+      - task: init-prek
 
   update:
     desc: >
@@ -62,7 +64,7 @@ tasks:
       - uv --version
     cmds:
       - uv tool upgrade --all
-      - uv tool run pre-commit autoupdate --freeze --jobs 4
+      - uv tool run prek update --freeze
       # Pin the README pre-commit example to our latest major tag (v1 -> v2 on a v2 release)
       - ./scripts/pin-precommit-rev.sh
       - uv lock --upgrade
@@ -73,13 +75,19 @@ tasks:
 
   lint:
     desc: Run the linter(s)
+    deps: [init-prek]
     cmds:
-      - '{{.RUN_SCRIPT}} pre-commit run --all-files'
+      - prek run --all-files
+      # Drop hook environments that are no longer referenced so we don't cache garbage in CI
+      - prek cache gc 1>/dev/null
 
   validate:
     desc: Validate the pre-commit config
+    deps: [init-prek]
     cmds:
-      - '{{.RUN_SCRIPT}} pre-commit validate-config'
+      # prek needs the paths explicitly; with no arguments it exits zero having checked nothing
+      - prek validate-config .pre-commit-config.yaml
+      - prek validate-manifest .pre-commit-hooks.yaml
 
   test:
     desc: Run the project tests
