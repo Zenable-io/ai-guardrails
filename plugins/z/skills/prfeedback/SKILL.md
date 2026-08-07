@@ -1,8 +1,19 @@
 ---
-description: Address all unresolved PR comments by making code changes or replying appropriately
+name: prfeedback
+description: Address every unresolved pull request comment on the current branch's PR by making code changes or replying, then mark each thread as addressed. Use when the user asks to handle PR feedback or review comments from human reviewers, or invokes `/z:prfeedback`.
 ---
 
-Retrieve all of the unresolved PR comments on the PR that corresponds to this branch. Lookup the PR number using `gh pr view --json number -q .number`, and then address each individual comment one at a time. NEVER FORCE PUSH.
+# Address PR feedback
+
+Retrieve all of the unresolved PR comments on the PR that corresponds to this branch.
+Lookup the PR number using `gh pr view --json number -q .number`, and then address each
+individual comment one at a time. NEVER FORCE PUSH.
+
+> For unresolved comments left by the **Zenable AI guardrails bot** specifically, use the
+> `triage` skill instead — it understands that bot's finding format.
+
+The helper scripts below ship with this skill, in its `scripts/` directory. Invoke them
+from that directory (they are plain `bash` + `gh`, with no other dependencies).
 
 For each comment, determine if code changes are needed:
 - If YES: make changes, commit, push, then mark thread as addressed with commit hash
@@ -48,8 +59,8 @@ git push
 # Then address remaining threads, using appropriate method for each
 ```
 
-At the end of this, re-run the tests to ensure they pass. Use the appropriate test command for this repository (e.g., `task test`, `npm test`, `pytest`, etc.).
+At the end of this, re-run the tests to ensure they pass. Use the appropriate test
+command for this repository (e.g., `task test`, `npm test`, `pytest`, etc.).
 
-Finally, git add, commit, and push all changes to the remote branch with an appropriate commit message.
-
-$ARGUMENTS
+Finally, git add, commit, and push all changes to the remote branch with an appropriate
+commit message.
