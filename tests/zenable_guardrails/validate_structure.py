@@ -8,10 +8,16 @@
   component types they do not support, so `hooks/` and `.claude-plugin/` are inert
   to them.
 
-Clients that support several formats prefer the client-specific manifest: Codex probes
-`.codex-plugin/plugin.json`, then `.claude-plugin/plugin.json`, then
-`.cursor-plugin/plugin.json`. Because the Claude manifest wins there, the two manifests
-would drift silently -- so the shared metadata is compared field by field below.
+A client that supports both formats prefers the *portable* manifest, not the
+client-specific one: codex-cli 0.147.0 reads the root `plugin.json` and refuses to
+install unless its `name` equals the marketplace entry name, failing with
+
+    plugin.json name `zenable` does not match marketplace plugin name `z`
+
+That rule is enforced in `check_marketplaces` below, and it is why both manifests and
+both catalogs agree on the name `z`. Because the root manifest is the one that wins,
+drift there is invisible rather than merely cosmetic, so every shared field -- `name`
+included -- is compared between the two manifests.
 """
 
 import json
@@ -26,9 +32,10 @@ SCHEMA = Path(__file__).resolve().parent / "schemas" / "agent-plugins-1.0.0-plug
 AGENT_PLUGINS_SCHEMA_ID = "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 
 # Metadata that describes the same package in both manifests and so must agree.
-# `name` is deliberately excluded: Claude Code namespaces commands and skills by plugin
-# name (`/z:triage`), while the portable identity is the discoverable `zenable`.
-SHARED_FIELDS = ("version", "description", "homepage", "repository", "author", "keywords")
+# `name` is included: Codex matches the root manifest's name against the marketplace
+# entry, and Claude Code namespaces skills by its own manifest's name (`/z:triage`), so
+# the two names diverging breaks installation in one client and the namespace in the other.
+SHARED_FIELDS = ("name", "version", "description", "homepage", "repository", "author", "keywords")
 
 # Agent Skills specification: 1-64 chars, lowercase alphanumeric and hyphens, must not
 # start or end with a hyphen, and must not contain consecutive hyphens.
@@ -212,13 +219,17 @@ def check_mcp_not_bundled() -> None:
         ok("no bundled MCP server (CLI-installed, by design)")
 
 
-def check_marketplaces(version: str | None) -> None:
+def check_marketplaces(version: str | None, plugin_name: str | None) -> None:
     """Both marketplace catalogs must resolve to `z@zenable` and the same directory.
 
     Distribution sits outside the Agent Plugins portable contract, so each client
     brings its own catalog format: Claude Code reads `.claude-plugin/marketplace.json`
     and Codex reads `.agents/plugins/marketplace.json`. The install commands in the
     README only stay correct if both agree.
+
+    The entry name must equal the portable manifest's `name`, because Codex compares
+    the two and aborts the install when they differ -- the package would still pass
+    every schema check and simply refuse to install.
 
     Releases hand-bump the version, so it lives in three places: both plugin manifests
     and the Claude marketplace entry. The Codex catalog carries no version -- Codex
@@ -239,9 +250,12 @@ def check_marketplaces(version: str | None) -> None:
             fail(f"{label} marketplace: name must be `zenable`, got {catalog.get('name')!r}")
 
         entries = catalog.get("plugins") or []
-        entry = next((e for e in entries if e.get("name") == "z"), None)
+        entry = next((e for e in entries if e.get("name") == plugin_name), None)
         if entry is None:
-            fail(f"{label} marketplace: no plugin entry named `z`")
+            fail(
+                f"{label} marketplace: no plugin entry named {plugin_name!r}; the entry name "
+                f"must equal the portable manifest's `name` or Codex refuses to install"
+            )
             continue
 
         source = entry.get("source")
@@ -284,20 +298,35 @@ def check_advertised_command(skill: str, description: str, namespace: str, names
 
 def check_referenced_scripts(skill: str, body: str) -> None:
     """Check that scripts a SKILL.md tells the agent to run actually exist, by a path
-    that resolves once the plugin is installed.
+    that resolves once the plugin is installed -- in every client, not just Claude Code.
 
     An installed skill runs with the user's repository as the working directory, so a
-    relative `./scripts/foo.sh` resolves against *their* checkout and simply is not
-    there. Only `${CLAUDE_PLUGIN_ROOT}` reliably points at the package.
+    relative `./scripts/foo.sh` resolves against *their* checkout and simply is not there.
+
+    `${CLAUDE_PLUGIN_ROOT}` does not fix that portably. Claude Code substitutes it into
+    the SKILL.md text before the agent ever sees it, so there it resolves; Codex and
+    Cursor pass the literal string through with the variable unset, so the command
+    becomes `/skills/<skill>/scripts/foo.sh` and fails. A skill that names the variable
+    must therefore also tell the agent how to resolve the directory without it.
     """
+    # A reference may name a script or the directory holding them, so accept either.
     for relative in sorted(set(re.findall(r"\$\{CLAUDE_PLUGIN_ROOT\}/([\w./-]+)", body))):
-        if not (PLUGIN_ROOT / relative).is_file():
+        if not (PLUGIN_ROOT / relative).exists():
             fail(f"skills/{skill}: references ${{CLAUDE_PLUGIN_ROOT}}/{relative}, which does not exist")
 
     for bare in sorted(set(re.findall(r"(?<![\w${/-])\./((?:scripts|skills)/[\w./-]+\.sh)", body))):
         fail(
             f"skills/{skill}: runs `./{bare}` relative to the user's repository -- "
-            f"use ${{CLAUDE_PLUGIN_ROOT}}/skills/{skill}/... instead"
+            f"resolve it against this skill's own directory instead"
+        )
+
+    # Naming the Claude-only variable is fine, but only alongside a fallback the other
+    # clients can follow. "this skill's directory" is the phrasing the skills use.
+    if "CLAUDE_PLUGIN_ROOT" in body and "directory containing this SKILL.md" not in body:
+        fail(
+            f"skills/{skill}: uses ${{CLAUDE_PLUGIN_ROOT}}, which only resolves in Claude "
+            f"Code, without telling other clients to resolve paths against the "
+            f"`directory containing this SKILL.md`"
         )
 
 
@@ -366,7 +395,7 @@ def main() -> int:
     portable = check_agent_plugin_package()
     check_manifests_agree(claude, portable)
     check_mcp_not_bundled()
-    check_marketplaces((claude or {}).get("version"))
+    check_marketplaces((claude or {}).get("version"), (portable or {}).get("name"))
     # Claude Code namespaces plugin skills under the Claude manifest name, so that is
     # the prefix every description has to advertise.
     skill_count = check_skills((claude or {}).get("name"))

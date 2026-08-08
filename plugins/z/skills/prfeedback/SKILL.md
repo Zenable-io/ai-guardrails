@@ -12,10 +12,21 @@ individual comment one at a time. NEVER FORCE PUSH.
 > For unresolved comments left by the **Zenable AI guardrails bot** specifically, use the
 > `triage` skill instead — it understands that bot's finding format.
 
-The helper scripts below ship with this skill, in its `scripts/` directory. Invoke them
-by their full path under `${CLAUDE_PLUGIN_ROOT}` as shown — the working directory is the
-user's repository, which has no `scripts/` directory of its own. They are plain `bash` +
-`gh`, with no other dependencies.
+The helper scripts below ship with this skill, in its `scripts/` directory. They are
+plain `bash` + `gh`, with no other dependencies.
+
+Before running them, set `SCRIPTS` to that directory — the working directory is the
+user's repository, which has no `scripts/` directory of its own:
+
+```bash
+# In Claude Code, ${CLAUDE_PLUGIN_ROOT} is substituted for you and this just works.
+# In every other client that variable is unset, so fall back to the absolute path of
+# the directory containing this SKILL.md, which you already know from loading it.
+SCRIPTS="${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts"
+[ -x "${SCRIPTS}/dump-unresolved-comments.sh" ] || SCRIPTS="<absolute path of this skill's directory>/scripts"
+```
+
+Verify with `ls "${SCRIPTS}"` before continuing; both scripts must be listed.
 
 For each comment, determine if code changes are needed:
 - If YES: make changes, commit, push, then mark thread as addressed with commit hash
@@ -33,7 +44,7 @@ For example:
 export PR_NUMBER="$(gh pr view --json number -q .number)"
 
 # 1. Get unresolved threads
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/dump-unresolved-comments.sh" "${PR_NUMBER}"
+"${SCRIPTS}/dump-unresolved-comments.sh" "${PR_NUMBER}"
 
 # 2a. If code changes needed: make changes, commit and push
 git add <files>
@@ -41,22 +52,22 @@ git commit -m "fix: address feedback from thread"
 git push
 
 # 3a. Mark thread as addressed with commit hash (for threads with specific line numbers)
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py 118 $(git rev-parse HEAD)
+"${SCRIPTS}/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py 118 $(git rev-parse HEAD)
 
 # 3b. For file-level threads (no specific line number), use '-' as the line number
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - $(git rev-parse HEAD)
+"${SCRIPTS}/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - $(git rev-parse HEAD)
 
 # 3c. If multiple file-level threads exist, specify which one (1-indexed)
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - $(git rev-parse HEAD) 2
+"${SCRIPTS}/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - $(git rev-parse HEAD) 2
 
 # 2b. If NO code changes needed: reply with custom comment (no commit)
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py 118 --comment "This is intentional because we need to maintain backward compatibility"
+"${SCRIPTS}/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py 118 --comment "This is intentional because we need to maintain backward compatibility"
 
 # Alternative: use -c shorthand for --comment
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - -c "Good catch! However, this behavior is documented in the README"
+"${SCRIPTS}/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - -c "Good catch! However, this behavior is documented in the README"
 
 # For file-level threads with custom comment and specific thread index
-"${CLAUDE_PLUGIN_ROOT}/skills/prfeedback/scripts/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - --comment "Acknowledged, will track in separate issue" 2
+"${SCRIPTS}/mark-addressed.sh" "${PR_NUMBER}" path/to/file.py - --comment "Acknowledged, will track in separate issue" 2
 
 # Then address remaining threads, using appropriate method for each
 ```

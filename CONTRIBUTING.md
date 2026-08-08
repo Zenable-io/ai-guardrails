@@ -164,14 +164,21 @@ disappear everywhere else. Claude Code surfaces plugin skills under the same
 
 `plugins/z/plugin.json` (Agent Plugins) and `plugins/z/.claude-plugin/plugin.json`
 (Claude Code) describe the same package and must be edited together — `task test`
-fails if their shared metadata drifts. The `name` fields differ on purpose: `z`
-keeps Claude Code's `/z:` namespace, while `zenable` is the discoverable identity
-in shared marketplaces.
+fails if any shared field drifts, `name` included.
 
-This matters because clients that support several formats prefer the
-client-specific manifest. Codex, for example, probes `.codex-plugin/plugin.json`,
-then `.claude-plugin/plugin.json`, then `.cursor-plugin/plugin.json` — so a stale
-Claude manifest would win there and the drift would be invisible.
+The name is `z` everywhere — both manifests and both marketplace catalogs. That is
+not cosmetic. A client supporting both formats prefers the **portable** manifest,
+and Codex additionally requires its `name` to equal the marketplace entry name:
+
+```console
+$ codex plugin add z@zenable
+Error: plugin.json name `zenable` does not match marketplace plugin name `z`
+```
+
+So a portable manifest named anything other than `z` passes every schema check and
+still cannot be installed. Claude Code, meanwhile, namespaces skills by its own
+manifest's name, which is what makes them `/z:feat` rather than `/zenable:feat`.
+Renaming either manifest breaks one client or the other.
 
 ### Modifying Hooks
 

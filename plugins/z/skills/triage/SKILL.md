@@ -15,10 +15,15 @@ This skill requires the Zenable CLI. Check whether it's installed:
 zenable CLI location: !`command -v zenable 2>/dev/null || echo "NOT INSTALLED"`
 
 If the above shows "NOT INSTALLED", install it by running this skill's bundled
-installer (idempotent — a no-op once the CLI is present):
+installer (idempotent — a no-op once the CLI is present). In Claude Code the variable
+below is substituted for you; in every other client it is unset, so fall back to the
+absolute path of the directory containing this SKILL.md, which you already know from
+loading it:
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/install-zenable.sh"
+INSTALLER="${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/install-zenable.sh"
+[ -f "$INSTALLER" ] || INSTALLER="<absolute path of this skill's directory>/scripts/install-zenable.sh"
+bash "$INSTALLER"
 ```
 
 The script delegates to the canonical installer at

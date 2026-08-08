@@ -101,9 +101,9 @@ Deep dive: [Claude Code integration](https://www.zenable.app/docs/integrations/m
 ### Agent Plugins
 
 The same package is also a portable
-[Agent Plugins 1.0](https://agent-plugins.org/specification) plugin named
-`zenable`, so clients that implement the spec load the identical ten skills with
-no Zenable-specific glue. Install it through the client's own plugin flow, adding
+[Agent Plugins 1.0](https://agent-plugins.org/specification) plugin, so clients
+that implement the spec load the identical ten skills with no Zenable-specific
+glue. Install it through the client's own plugin flow, adding
 `Zenable-io/ai-guardrails` as a marketplace and then installing `z@zenable`.
 
 ### Other AI editors
