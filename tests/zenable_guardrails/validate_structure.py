@@ -4,9 +4,9 @@
 `plugins/z` ships in two formats from one directory:
 
 - Claude Code reads `.claude-plugin/plugin.json`, `skills/`, and `hooks/hooks.json`.
-- Agent Plugins 1.0 clients (Cursor, Codex, VS Code, Kiro, Copilot) read the root
-  `plugin.json` and `skills/`. They ignore component types they do not support, so
-  `hooks/` and `.claude-plugin/` are inert to them.
+- Agent Plugins 1.0 clients read the root `plugin.json` and `skills/`. They ignore
+  component types they do not support, so `hooks/` and `.claude-plugin/` are inert
+  to them.
 
 Clients that support several formats prefer the client-specific manifest: Codex probes
 `.codex-plugin/plugin.json`, then `.claude-plugin/plugin.json`, then
@@ -259,16 +259,41 @@ def check_marketplaces(version: str | None) -> None:
             )
 
 
-def check_skills() -> int:
+def check_advertised_command(skill: str, description: str, namespace: str, names: set[str]) -> None:
+    """Check that a description advertises its own slash command and no other.
+
+    Claude Code surfaces plugin skills under the plugin's own namespace, so `triage`
+    is reachable as `/z:triage` and never as `/triage`. A description that promises
+    the bare form points users at a command that does not exist, and nothing else in
+    the package would catch it -- the skill still loads and still auto-activates.
+    """
+    expected = f"/{namespace}:{skill}"
+    if not re.search(rf"{re.escape(expected)}(?![\w-])", description):
+        fail(f"skills/{skill}: description must say it is invocable as `{expected}`")
+
+    # A `/name` that matches some skill is an un-namespaced command reference. The
+    # lookbehind keeps prose like "pull/merge request" out of it, and `/z:triage`
+    # only ever captures the `z` namespace, which is not a skill name.
+    for referenced in sorted(set(re.findall(r"(?<![\w:-])/([\w-]+)", description))):
+        if referenced in names:
+            fail(
+                f"skills/{skill}: description advertises `/{referenced}`, which is not a "
+                f"real command -- use `/{namespace}:{referenced}`"
+            )
+
+
+def check_skills(namespace: str | None) -> int:
     print("\n== Skills ==")
     skills_dir = PLUGIN_ROOT / "skills"
     if not skills_dir.is_dir():
         fail("missing required directory: skills/")
         return 0
 
-    count = 0
-    for skill in sorted(p for p in skills_dir.iterdir() if p.is_dir()):
-        count += 1
+    skill_dirs = sorted(p for p in skills_dir.iterdir() if p.is_dir())
+    names = {p.name for p in skill_dirs}
+
+    for skill in skill_dirs:
+        before = len(errors)
         manifest = skill / "SKILL.md"
         if not manifest.is_file():
             fail(f"skills/{skill.name}: missing SKILL.md")
@@ -292,10 +317,12 @@ def check_skills() -> int:
             fail(f"skills/{skill.name}: frontmatter missing `description`")
         elif len(description) > MAX_DESCRIPTION:
             fail(f"skills/{skill.name}: description exceeds {MAX_DESCRIPTION} characters")
+        elif namespace:
+            check_advertised_command(skill.name, description, namespace, names)
 
-        if name == skill.name and description:
+        if len(errors) == before:
             ok(f"skills/{skill.name}")
-    return count
+    return len(skill_dirs)
 
 
 def check_containment() -> None:
@@ -318,7 +345,9 @@ def main() -> int:
     check_manifests_agree(claude, portable)
     check_mcp_not_bundled()
     check_marketplaces((claude or {}).get("version"))
-    skill_count = check_skills()
+    # Claude Code namespaces plugin skills under the Claude manifest name, so that is
+    # the prefix every description has to advertise.
+    skill_count = check_skills((claude or {}).get("name"))
     check_containment()
 
     print()
@@ -331,7 +360,7 @@ def main() -> int:
     print("Claude Code:")
     print("  /plugin marketplace add Zenable-io/ai-guardrails")
     print("  /plugin install z@zenable")
-    print("Agent Plugins 1.0 clients (Cursor, Codex, VS Code, Kiro, Copilot):")
+    print("Agent Plugins 1.0 clients:")
     print("  install the `zenable` plugin from this repository")
     return 0
 

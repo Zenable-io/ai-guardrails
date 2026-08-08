@@ -131,15 +131,14 @@ ai-guardrails/
 
 Every capability is a **skill**. Don't add slash commands: Agent Plugins 1.0 has
 no portable home for them, so a command would work in Claude Code and silently
-disappear in Cursor, Codex, VS Code, Kiro, and Copilot. Claude Code surfaces
-plugin skills under the same `/z:<name>` namespace it uses for commands, so a
-skill loses nothing.
+disappear everywhere else. Claude Code surfaces plugin skills under the same
+`/z:<name>` namespace it uses for commands, so a skill loses nothing.
 
 1. Create `plugins/z/skills/my-skill/SKILL.md`:
    ```yaml
    ---
    name: my-skill
-   description: Clear description with trigger keywords. Use when...
+   description: Clear description with trigger keywords. Use when..., or invokes `/z:my-skill`.
    allowed-tools: Read, Write, Edit, Bash
    ---
 
@@ -149,14 +148,17 @@ skill loses nothing.
    ```
 
    The frontmatter `name` must match the directory name, and `description` must
-   say both what the skill does and when to use it.
+   say both what the skill does and when to use it. Name the slash command as
+   `/z:my-skill` — the bare `/my-skill` is not a real command, and advertising it
+   sends users somewhere that does not exist.
 
 2. Keep any scripts, references, or assets the skill needs **inside** the skill
    directory — Agent Plugins requires every referenced path to resolve within
    the package.
 
-3. Run `task test`, then confirm the skill activates in Claude Code and in at
-   least one Agent Plugins client.
+3. Run `task test`. It validates both manifests, the marketplace catalogs, and
+   every skill — frontmatter, naming rules, description length, and the
+   `/z:<name>` command each description advertises.
 
 ### Changing plugin metadata
 
@@ -201,28 +203,9 @@ task test
 /plugin install z@zenable
 ```
 
-Test the portable format against a real Agent Plugins client too. Codex takes a
-local marketplace path, so it round-trips straight from a working tree:
-
-```bash
-codex plugin marketplace add .
-codex plugin add z@zenable
-codex plugin list --json          # confirm it installed
-
-# ...and to undo it
-codex plugin remove z@zenable
-codex plugin marketplace remove zenable
-```
-
-Cursor loads plugins from `~/.cursor/plugins/local/<name>`, so copying or
-symlinking `plugins/z` there works for local development.
-
-Upstream validators are worth running when changing skills or the manifest:
-
-```bash
-# Agent Skills conformance, from github.com/agentskills/agentskills
-skills-ref validate plugins/z/skills/<name>
-```
+`task test` is the whole check — it covers everything an external validator would
+tell you about the skills and the manifests, so there is nothing extra to install
+or run by hand. `task lint` runs the same git hooks CI runs.
 
 ## Code Style
 
