@@ -1,6 +1,6 @@
 ---
 name: triage
-description: Fetch and address unresolved Zenable AI guardrails review comments on the current pull request (GitHub PR) or merge request (GitLab MR). Use this skill whenever the user says "triage", "address PR feedback", "fix review comments", "respond to the guardrails bot", or anything about responding to automated code review feedback on a pull/merge request. Also trigger on /triage.
+description: Fetch and address unresolved Zenable AI guardrails review comments on the current pull request (GitHub PR) or merge request (GitLab MR). Use this skill whenever the user says "triage", "address PR feedback", "fix review comments", "respond to the guardrails bot", or anything about responding to automated code review feedback on a pull/merge request. Also trigger when the user invokes `/z:triage`.
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
