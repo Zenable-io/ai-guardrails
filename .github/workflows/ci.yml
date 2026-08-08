@@ -35,6 +35,15 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           python-version: ${{ env.python_version }}
+      # restore-keys means a hook bump reuses the previous run's environments for every unchanged hook instead of rebuilding all of them from scratch
+      - name: Cache the prek hook environments
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/prek
+          key: prek-${{ runner.os }}-${{ env.python_version }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          restore-keys: |
+            prek-${{ runner.os }}-${{ env.python_version }}-
+            prek-${{ runner.os }}-
       - name: Lint
         run: task -v lint
   test:

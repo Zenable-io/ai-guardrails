@@ -24,11 +24,19 @@ runs:
         echo "run_script=${run_script}" | tee -a "${GITHUB_ENV}"
 
     - name: Setup uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v7
       with:
         enable-cache: true
         cache-dependency-glob: "**/uv.lock"
         python-version: ${{ inputs.python-version }}
+
+    - name: Cache uv downloads
+      uses: actions/cache@v5
+      with:
+        path: ~/.cache/uv
+        key: uv-downloads-${{ runner.os }}-${{ hashFiles(format('{0}/uv.lock', inputs.working-directory)) }}
+        restore-keys: |
+          uv-downloads-${{ runner.os }}-
 
     - name: Install Task
       uses: go-task/setup-task@v1
@@ -36,17 +44,9 @@ runs:
         # Passing a repo token reduces the likelihood of API rate limit exceeded
         repo-token: ${{ inputs.token }}
 
-    - name: Set Python hash for caching
-      shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
-      run: |
-        # Create a hash of the Python version for better cache keys
-        echo "PY=$(python -VV | sha256sum | cut -d' ' -f1)" | tee -a "${GITHUB_ENV}"
-
-    - name: Cache pre-commit environments
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pre-commit
-        key: pre-commit|${{ env.PY }}|${{ hashFiles(format('{0}/.pre-commit-config.yaml', inputs.working-directory)) }}
+    # NOTE: the hook environment cache deliberately lives in the lint job rather than here. Every job that bootstraps shares one cache key, and only the lint
+    # job actually populates ~/.cache/prek. Caching it here meant a non-linting job could win the race and save an empty directory under the key, permanently
+    # starving the lint job of a warm cache.
 
     - name: Initialize the repository
       working-directory: ${{ inputs.working-directory }}

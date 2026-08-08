@@ -14,7 +14,10 @@ Thank you for your interest in contributing! This document provides guidelines f
    ```bash
    task init
    ```
-   This installs dependencies and sets up pre-commit hooks.
+   This installs dependencies and sets up the git hooks. We run them with
+   [prek](https://github.com/j178/prek), a drop-in replacement for `pre-commit`
+   that reads the same `.pre-commit-config.yaml` but resolves hook environments
+   substantially faster.
 
 3. **Run tests**:
    ```bash
@@ -223,7 +226,7 @@ skills-ref validate plugins/z/skills/<name>
 
 ## Code Style
 
-- Python: PEP 8 (enforced by pre-commit)
+- Python: PEP 8 (enforced by the git hooks)
 - JSON: 2-space indentation
 - YAML: 2-space indentation, explicit start marker (`---`)
 - Markdown: Follow [markdownlint](https://github.com/DavidAnson/markdownlint) rules
