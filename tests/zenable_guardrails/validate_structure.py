@@ -212,13 +212,17 @@ def check_mcp_not_bundled() -> None:
         ok("no bundled MCP server (CLI-installed, by design)")
 
 
-def check_marketplaces() -> None:
+def check_marketplaces(version: str | None) -> None:
     """Both marketplace catalogs must resolve to `z@zenable` and the same directory.
 
     Distribution sits outside the Agent Plugins portable contract, so each client
     brings its own catalog format: Claude Code reads `.claude-plugin/marketplace.json`
     and Codex reads `.agents/plugins/marketplace.json`. The install commands in the
     README only stay correct if both agree.
+
+    Releases hand-bump the version, so it lives in three places: both plugin manifests
+    and the Claude marketplace entry. The Codex catalog carries no version -- Codex
+    reads it from the plugin itself.
     """
     print("\n== Marketplaces ==")
     catalogs = {
@@ -247,6 +251,12 @@ def check_marketplaces() -> None:
             fail(f"{label} marketplace: `z` points at {actual!r}, expected {expected_path!r}")
         else:
             ok(f"{label} marketplace: z@zenable -> {expected_path}")
+
+        if "version" in entry and version is not None and entry["version"] != version:
+            fail(
+                f"{label} marketplace: `z` is version {entry['version']!r}, but the "
+                f"plugin manifests say {version!r}"
+            )
 
 
 def check_skills() -> int:
@@ -307,7 +317,7 @@ def main() -> int:
     portable = check_agent_plugin_package()
     check_manifests_agree(claude, portable)
     check_mcp_not_bundled()
-    check_marketplaces()
+    check_marketplaces((claude or {}).get("version"))
     skill_count = check_skills()
     check_containment()
 
