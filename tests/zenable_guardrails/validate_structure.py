@@ -282,6 +282,25 @@ def check_advertised_command(skill: str, description: str, namespace: str, names
             )
 
 
+def check_referenced_scripts(skill: str, body: str) -> None:
+    """Check that scripts a SKILL.md tells the agent to run actually exist, by a path
+    that resolves once the plugin is installed.
+
+    An installed skill runs with the user's repository as the working directory, so a
+    relative `./scripts/foo.sh` resolves against *their* checkout and simply is not
+    there. Only `${CLAUDE_PLUGIN_ROOT}` reliably points at the package.
+    """
+    for relative in sorted(set(re.findall(r"\$\{CLAUDE_PLUGIN_ROOT\}/([\w./-]+)", body))):
+        if not (PLUGIN_ROOT / relative).is_file():
+            fail(f"skills/{skill}: references ${{CLAUDE_PLUGIN_ROOT}}/{relative}, which does not exist")
+
+    for bare in sorted(set(re.findall(r"(?<![\w${/-])\./((?:scripts|skills)/[\w./-]+\.sh)", body))):
+        fail(
+            f"skills/{skill}: runs `./{bare}` relative to the user's repository -- "
+            f"use ${{CLAUDE_PLUGIN_ROOT}}/skills/{skill}/... instead"
+        )
+
+
 def check_skills(namespace: str | None) -> int:
     print("\n== Skills ==")
     skills_dir = PLUGIN_ROOT / "skills"
@@ -299,10 +318,13 @@ def check_skills(namespace: str | None) -> int:
             fail(f"skills/{skill.name}: missing SKILL.md")
             continue
 
-        fields = parse_frontmatter(manifest.read_text())
+        body = manifest.read_text()
+        fields = parse_frontmatter(body)
         if fields is None:
             fail(f"skills/{skill.name}: SKILL.md has no YAML frontmatter block")
             continue
+
+        check_referenced_scripts(skill.name, body)
 
         name = fields.get("name")
         if name is None:

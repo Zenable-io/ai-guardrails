@@ -54,16 +54,26 @@ EOF
     exit 1
 fi
 
+if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: PR_NUMBER must be a positive integer, got '$PR_NUMBER'" >&2
+    exit 1
+fi
+
+if ! [[ "$THREAD_INDEX" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: THREAD_INDEX must be a positive integer, got '$THREAD_INDEX'" >&2
+    exit 1
+fi
+
 # Get repo owner and name
 REPO_INFO=$(gh repo view --json owner,name)
-OWNER=$(echo "$REPO_INFO" | jq -r '.owner.login')
-REPO=$(echo "$REPO_INFO" | jq -r '.name')
+OWNER=$(jq -r '.owner.login' <<<"$REPO_INFO")
+REPO=$(jq -r '.name' <<<"$REPO_INFO")
 
 # Create comment body based on mode
 if [ -n "$COMMIT_HASH" ]; then
     # Format commit hash (support short or full)
-    SHORT_HASH=$(echo "$COMMIT_HASH" | cut -c1-7)
-    FINAL_COMMENT_BODY="<h1>Automated Message</h1>\\n\\nAddressed in ${SHORT_HASH}"
+    SHORT_HASH=$(printf '%s' "$COMMIT_HASH" | cut -c1-7)
+    FINAL_COMMENT_BODY=$(printf '<h1>Automated Message</h1>\n\nAddressed in %s' "$SHORT_HASH")
     MODE_DESC="commit ${SHORT_HASH}"
 else
     # Use custom comment body
@@ -77,57 +87,77 @@ if [ "$LINE_NUMBER" = "-" ] || [ "$LINE_NUMBER" = "0" ]; then
     echo "Marking file-level thread on ${FILE_PATH} with ${MODE_DESC}..." >&2
 else
     SEARCH_BY_LINE=true
+    if ! [[ "$LINE_NUMBER" =~ ^[0-9]+$ ]]; then
+        echo "ERROR: LINE_NUMBER must be a positive integer or '-', got '$LINE_NUMBER'" >&2
+        exit 1
+    fi
     echo "Marking ${FILE_PATH}:${LINE_NUMBER} with ${MODE_DESC}..." >&2
 fi
+
+# Values reach GitHub as typed GraphQL variables rather than as text spliced into the
+# query, so a repository, path, or comment body carrying quotes cannot become query
+# structure. The body especially: it is free text supplied on the command line.
+# shellcheck disable=SC2016  # $owner and friends are GraphQL variables; the shell must leave them alone
+QUERY='query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes { id path line startLine isResolved }
+      }
+    }
+  }
+}'
 
 # Function to fetch all review threads and find the matching one(s)
 find_thread_ids() {
     local cursor=""
     local has_next=true
-    local all_thread_ids=()
+    local response ids
 
     while [ "$has_next" = "true" ]; do
-        local cursor_arg=""
         if [ -n "$cursor" ]; then
-            cursor_arg=", after: \"$cursor\""
+            response=$(gh api graphql -f query="$QUERY" \
+                -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" -f cursor="$cursor")
+        else
+            response=$(gh api graphql -f query="$QUERY" \
+                -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER")
         fi
-
-        local query="{ repository(owner: \"$OWNER\", name: \"$REPO\") { pullRequest(number: $PR_NUMBER) { reviewThreads(first: 100${cursor_arg}) { pageInfo { hasNextPage endCursor } nodes { id path line startLine isResolved } } } } }"
-
-        local response
-        response=$(gh api graphql -f query="$query")
 
         # Find threads matching criteria
-        local thread_ids
         if [ "$SEARCH_BY_LINE" = "true" ]; then
             # Search for threads with specific line number
-            thread_ids=$(echo "$response" | jq -r --arg path "$FILE_PATH" --arg line "$LINE_NUMBER" '.data.repository.pullRequest.reviewThreads.nodes[] | select(.path == $path and (.line == ($line | tonumber) or .startLine == ($line | tonumber)) and .isResolved == false) | .id')
+            ids=$(jq -r --arg path "$FILE_PATH" --argjson line "$LINE_NUMBER" \
+                '.data.repository.pullRequest.reviewThreads.nodes[] | select(.path == $path and (.line == $line or .startLine == $line) and .isResolved == false) | .id' <<<"$response")
         else
             # Search for file-level threads (no line number)
-            thread_ids=$(echo "$response" | jq -r --arg path "$FILE_PATH" '.data.repository.pullRequest.reviewThreads.nodes[] | select(.path == $path and .line == null and .startLine == null and .isResolved == false) | .id')
+            ids=$(jq -r --arg path "$FILE_PATH" \
+                '.data.repository.pullRequest.reviewThreads.nodes[] | select(.path == $path and .line == null and .startLine == null and .isResolved == false) | .id' <<<"$response")
         fi
 
-        # Add found IDs to array
-        while IFS= read -r id; do
-            if [ -n "$id" ]; then
-                all_thread_ids+=("$id")
-            fi
-        done <<< "$thread_ids"
+        if [ -n "$ids" ]; then
+            printf '%s\n' "$ids"
+        fi
 
-        has_next=$(echo "$response" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
-        cursor=$(echo "$response" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
+        has_next=$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"$response")
+        cursor=$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""' <<<"$response")
 
-        if [ "$cursor" = "null" ]; then
+        if [ -z "$cursor" ]; then
             has_next=false
         fi
     done
-
-    # Return all found thread IDs (one per line)
-    printf '%s\n' "${all_thread_ids[@]}"
 }
 
-# Find matching thread IDs
-mapfile -t THREAD_IDS < <(find_thread_ids)
+# Find matching thread IDs. `mapfile` would be wrong twice over: it is a bash 4
+# builtin, absent from the bash 3.2 that ships with macOS, and it turned the
+# no-matches case into a one-element array holding an empty string -- so the
+# not-found branch below never ran and an empty thread ID reached the mutation.
+THREAD_IDS=()
+while IFS= read -r id; do
+    if [ -n "$id" ]; then
+        THREAD_IDS+=("$id")
+    fi
+done < <(find_thread_ids)
 
 if [ "${#THREAD_IDS[@]}" -eq 0 ]; then
     if [ "$SEARCH_BY_LINE" = "true" ]; then
@@ -158,21 +188,21 @@ else
 fi
 
 # Post comment to the thread using GraphQL mutation
-MUTATION="mutation {
+# shellcheck disable=SC2016  # $threadId and $body are GraphQL variables, sent via -f below
+MUTATION='mutation($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {
-    pullRequestReviewThreadId: \"${THREAD_ID}\",
-    body: \"${FINAL_COMMENT_BODY}\"
+    pullRequestReviewThreadId: $threadId,
+    body: $body
   }) {
-    comment {
-      id
-    }
+    comment { id }
   }
-}"
+}'
 
-response=$(gh api graphql -f query="$MUTATION")
+response=$(gh api graphql -f query="$MUTATION" \
+    -f threadId="$THREAD_ID" -f body="$FINAL_COMMENT_BODY")
 
 # Check if the mutation was successful
-if echo "$response" | jq -e '.data.addPullRequestReviewThreadReply.comment.id' > /dev/null 2>&1; then
+if jq -e '.data.addPullRequestReviewThreadReply.comment.id' >/dev/null 2>&1 <<<"$response"; then
     if [ "$SEARCH_BY_LINE" = "true" ]; then
         echo "Successfully posted comment to thread at ${FILE_PATH}:${LINE_NUMBER}" >&2
     else

@@ -11,10 +11,69 @@ if [ -z "$PR_NUMBER" ]; then
     exit 1
 fi
 
+if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: PR_NUMBER must be a positive integer, got '$PR_NUMBER'" >&2
+    exit 1
+fi
+
 # Get repo owner and name
 REPO_INFO=$(gh repo view --json owner,name)
-OWNER=$(echo "$REPO_INFO" | jq -r '.owner.login')
-REPO=$(echo "$REPO_INFO" | jq -r '.name')
+OWNER=$(jq -r '.owner.login' <<<"$REPO_INFO")
+REPO=$(jq -r '.name' <<<"$REPO_INFO")
+
+# The owner, repo, and PR number reach GitHub as typed GraphQL variables rather than
+# as text spliced into the query, so a value carrying quotes or braces is data and
+# cannot become query structure.
+# shellcheck disable=SC2016  # $owner and friends are GraphQL variables; the shell must leave them alone
+QUERY='query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          isResolved
+          path
+          line
+          startLine
+          comments(first: 100) { nodes { author { login } body } }
+        }
+      }
+    }
+  }
+}'
+
+# Function to fetch all review threads with pagination
+fetch_all_threads() {
+    local cursor=""
+    local has_next=true
+    local all_threads="[]"
+    local response threads
+
+    while [ "$has_next" = "true" ]; do
+        if [ -n "$cursor" ]; then
+            response=$(gh api graphql -f query="$QUERY" \
+                -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER" -f cursor="$cursor")
+        else
+            response=$(gh api graphql -f query="$QUERY" \
+                -f owner="$OWNER" -f repo="$REPO" -F pr="$PR_NUMBER")
+        fi
+
+        threads=$(jq '.data.repository.pullRequest.reviewThreads.nodes' <<<"$response")
+        all_threads=$(jq --argjson new "$threads" '. + $new' <<<"$all_threads")
+
+        has_next=$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage' <<<"$response")
+        cursor=$(jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor // ""' <<<"$response")
+
+        if [ -z "$cursor" ]; then
+            has_next=false
+        fi
+    done
+
+    printf '%s' "$all_threads"
+}
+
+# Fetch all threads
+ALL_THREADS=$(fetch_all_threads)
 
 echo '<?xml version="1.0" encoding="UTF-8"?>'
 echo '<pr_unresolved_comments>'
@@ -22,57 +81,29 @@ echo "  <pr_number>$PR_NUMBER</pr_number>"
 echo "  <repository>${OWNER}/${REPO}</repository>"
 echo '  <threads>'
 
-# Function to fetch all review threads with pagination
-fetch_all_threads() {
-    local cursor=""
-    local has_next=true
-    local all_threads="[]"
-
-    while [ "$has_next" = "true" ]; do
-        local cursor_arg=""
-        if [ -n "$cursor" ]; then
-            cursor_arg=", after: \"$cursor\""
-        fi
-
-        local query="{ repository(owner: \"$OWNER\", name: \"$REPO\") { pullRequest(number: $PR_NUMBER) { reviewThreads(first: 100${cursor_arg}) { pageInfo { hasNextPage endCursor } nodes { isResolved path line startLine comments(first: 100) { nodes { author { login } body } } } } } } }"
-
-        local response
-        response=$(gh api graphql -f query="$query")
-
-        local threads
-        threads=$(echo "$response" | jq '.data.repository.pullRequest.reviewThreads.nodes')
-        all_threads=$(echo "$all_threads" | jq ". + $threads")
-
-        has_next=$(echo "$response" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.hasNextPage')
-        cursor=$(echo "$response" | jq -r '.data.repository.pullRequest.reviewThreads.pageInfo.endCursor')
-
-        if [ "$cursor" = "null" ]; then
-            has_next=false
-        fi
-    done
-
-    echo "$all_threads"
-}
-
-# Fetch all threads
-ALL_THREADS=$(fetch_all_threads)
-
-# Filter unresolved threads and output XML
-echo "$ALL_THREADS" | jq -r '.[] | select(.isResolved == false) |
-    "    <thread>",
-    "      <file>" + (.path // "unknown") + "</file>",
-    (if .line != null then "      <line>" + (.line | tostring) + "</line>" else "" end),
-    (if .startLine != null then "      <start_line>" + (.startLine | tostring) + "</start_line>" else "" end),
-    "      <comments>",
-    (.comments.nodes[] |
-        "        <comment>",
-        "          <author>" + .author.login + "</author>",
-        "          <body><![CDATA[" + .body + "]]></body>",
-        "        </comment>"
-    ),
-    "      </comments>",
-    "    </thread>"
-' | grep -v '^$'
+# Each thread builds an array of lines that is only then flattened, so an absent line
+# or startLine contributes no element at all. The previous version emitted an empty
+# string and stripped it with `grep -v`, which exited 1 on a PR with nothing
+# unresolved and, under `pipefail`, killed the script before the closing tags.
+#
+# A comment body is written by whoever reviewed the PR, so it is untrusted: `]]>`
+# is split across two CDATA sections to keep a body from closing the section early,
+# and a deleted author comes back as null rather than a login.
+echo "$ALL_THREADS" | jq -r '
+    .[] | select(.isResolved == false) |
+    ["    <thread>", "      <file>" + (.path // "unknown") + "</file>"]
+    + (if .line != null then ["      <line>" + (.line | tostring) + "</line>"] else [] end)
+    + (if .startLine != null then ["      <start_line>" + (.startLine | tostring) + "</start_line>"] else [] end)
+    + ["      <comments>"]
+    + ([.comments.nodes[] |
+        ["        <comment>",
+         "          <author>" + (.author.login // "unknown") + "</author>",
+         "          <body><![CDATA[" + ((.body // "") | gsub("\\]\\]>"; "]]]]><![CDATA[>")) + "]]></body>",
+         "        </comment>"]
+       ] | add // [])
+    + ["      </comments>", "    </thread>"]
+    | .[]
+'
 
 echo '  </threads>'
 echo '</pr_unresolved_comments>'
