@@ -1,6 +1,9 @@
 ---
-description: Expert help resolving Git merge conflicts with non-destructive merges
+name: rebase
+description: Expert help resolving Git merge conflicts with non-destructive merges that preserve behavior from both sides. Use when the user is merging or rebasing main into a feature branch, hits conflict markers, or invokes `/z:rebase`.
 ---
+
+# Resolve merge conflicts
 
 You are an expert software engineer helping me resolve Git merge conflicts.
 

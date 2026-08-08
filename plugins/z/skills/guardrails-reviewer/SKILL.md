@@ -1,6 +1,6 @@
 ---
 name: guardrails-reviewer
-description: Reviews code changes against your Zenable requirements using hybrid LLM-as-judge analysis and Zenable's deterministic guardrails. Automatically invoked when making code changes or at development milestones. Use for security compliance, quality checks, and policy enforcement.
+description: Reviews code changes against your Zenable requirements using hybrid LLM-as-judge analysis and Zenable's deterministic guardrails. Automatically invoked when making code changes or at development milestones. Use for security compliance, quality checks, and policy enforcement, or when the user invokes `/z:guardrails-reviewer`.
 allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 

@@ -89,7 +89,10 @@ chore(deps): update pre-commit hooks
 ```
 ai-guardrails/
 ├── .claude-plugin/
-│   └── marketplace.json          # Marketplace configuration
+│   └── marketplace.json          # Marketplace catalog (Claude Code)
+├── .agents/
+│   └── plugins/
+│       └── marketplace.json      # Marketplace catalog (Codex)
 ├── .github/
 │   ├── actions/
 │   │   └── bootstrap/            # Reusable setup action
@@ -98,22 +101,25 @@ ai-guardrails/
 │       ├── semantic-release.yml  # Automated releases
 │       └── update.yml            # Dependency updates
 ├── plugins/
-│   └── z/
+│   └── z/                        # One directory, two plugin formats
+│       ├── plugin.json           # Agent Plugins 1.0 manifest (portable)
 │       ├── .claude-plugin/
-│       │   └── plugin.json       # Plugin metadata
-│       ├── commands/            # Slash commands (feat, debug, rebase, …)
-│       ├── hooks/
+│       │   └── plugin.json       # Claude Code manifest
+│       ├── hooks/                # Claude Code only — not portable
 │       │   └── hooks.json        # Event hooks
 │       ├── scripts/
 │       │   └── bootstrap.sh      # SessionStart CLI bootstrap
-│       └── skills/
+│       └── skills/               # Shared by BOTH formats
 │           ├── guardrails-reviewer/
 │           │   └── SKILL.md      # Autonomous conformance reviewer
-│           └── triage/
-│               └── SKILL.md      # /triage review-comment resolver
+│           ├── setup/            # /z:setup onboarding
+│           ├── triage/           # /z:triage review-comment resolver
+│           └── …                 # feat, debug, addtests, doublecheck,
+│                                 # rebase, prfeedback, researchbranch
 ├── tests/
 │   └── zenable_guardrails/
-│       └── validate_structure.py # Plugin validation
+│       ├── schemas/              # Vendored upstream Agent Plugins schema
+│       └── validate_structure.py # Validates both formats + drift
 ├── pyproject.toml                # Project config + semantic-release
 ├── Taskfile.yml                  # Task automation
 └── README.md
@@ -121,31 +127,18 @@ ai-guardrails/
 
 ## Plugin Development
 
-### Adding a New Command
+### Adding a New Capability
 
-1. Create `plugins/z/commands/my-command.md`:
-   ```markdown
-   ---
-   description: Brief description of what this command does
-   ---
-
-   # My Command
-
-   Detailed explanation and implementation instructions for Claude.
-   ```
-
-2. Test locally:
-   ```bash
-   task test
-   ```
-
-### Adding a New Skill
+Every capability is a **skill**. Don't add slash commands: Agent Plugins 1.0 has
+no portable home for them, so a command would work in Claude Code and silently
+disappear everywhere else. Claude Code surfaces plugin skills under the same
+`/z:<name>` namespace it uses for commands, so a skill loses nothing.
 
 1. Create `plugins/z/skills/my-skill/SKILL.md`:
    ```yaml
    ---
    name: my-skill
-   description: Clear description with trigger keywords. Use when...
+   description: Clear description with trigger keywords. Use when..., or invokes `/z:my-skill`.
    allowed-tools: Read, Write, Edit, Bash
    ---
 
@@ -154,9 +147,38 @@ ai-guardrails/
    Detailed instructions for autonomous activation.
    ```
 
-2. Update validation test if needed
+   The frontmatter `name` must match the directory name, and `description` must
+   say both what the skill does and when to use it. Name the slash command as
+   `/z:my-skill` — the bare `/my-skill` is not a real command, and advertising it
+   sends users somewhere that does not exist.
 
-3. Test that Claude activates it appropriately
+2. Keep any scripts, references, or assets the skill needs **inside** the skill
+   directory — Agent Plugins requires every referenced path to resolve within
+   the package.
+
+3. Run `task test`. It validates both manifests, the marketplace catalogs, and
+   every skill — frontmatter, naming rules, description length, and the
+   `/z:<name>` command each description advertises.
+
+### Changing plugin metadata
+
+`plugins/z/plugin.json` (Agent Plugins) and `plugins/z/.claude-plugin/plugin.json`
+(Claude Code) describe the same package and must be edited together — `task test`
+fails if any shared field drifts, `name` included.
+
+The name is `z` everywhere — both manifests and both marketplace catalogs. That is
+not cosmetic. A client supporting both formats prefers the **portable** manifest,
+and Codex additionally requires its `name` to equal the marketplace entry name:
+
+```console
+$ codex plugin add z@zenable
+Error: plugin.json name `zenable` does not match marketplace plugin name `z`
+```
+
+So a portable manifest named anything other than `z` passes every schema check and
+still cannot be installed. Claude Code, meanwhile, namespaces skills by its own
+manifest's name, which is what makes them `/z:feat` rather than `/zenable:feat`.
+Renaming either manifest breaks one client or the other.
 
 ### Modifying Hooks
 
@@ -180,13 +202,17 @@ Edit `plugins/z/hooks/hooks.json`:
 ### Testing the Plugin
 
 ```bash
-# Validate structure
+# Validate both formats, manifest drift, and every skill
 task test
 
 # Install in Claude Code (from repo root)
 /plugin marketplace add ./
 /plugin install z@zenable
 ```
+
+`task test` is the whole check — it covers everything an external validator would
+tell you about the skills and the manifests, so there is nothing extra to install
+or run by hand. `task lint` runs the same git hooks CI runs.
 
 ## Code Style
 

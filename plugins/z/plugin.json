@@ -1,7 +1,15 @@
 {
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "z",
   "version": "2.2.0",
   "description": "Make your coding agents automatically self-improve. Enforce your coding standards while your developers keep using whatever IDE, model, or agent they want.",
+  "author": {
+    "name": "Zenable",
+    "url": "https://zenable.io"
+  },
+  "homepage": "https://docs.zenable.io",
+  "repository": "https://github.com/Zenable-io/ai-guardrails",
+  "license": "Apache-2.0",
   "keywords": [
     "zenable",
     "guardrails",
@@ -14,12 +22,5 @@
     "specifications",
     "spec-driven development",
     "context engineering"
-  ],
-  "homepage": "https://docs.zenable.io",
-  "repository": "https://github.com/Zenable-io/ai-guardrails",
-  "author": {
-    "name": "Zenable",
-    "url": "https://zenable.io"
-  },
-  "skills": "./skills"
+  ]
 }

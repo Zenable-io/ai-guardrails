@@ -1,0 +1,19 @@
+{
+  "name": "zenable",
+  "interface": {
+    "displayName": "Zenable AI Guardrails"
+  },
+  "plugins": [
+    {
+      "name": "z",
+      "source": {
+        "source": "local",
+        "path": "./plugins/z"
+      },
+      "policy": {
+        "installation": "AVAILABLE"
+      },
+      "category": "Engineering"
+    }
+  ]
+}

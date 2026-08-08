@@ -93,11 +93,21 @@ tasks:
     desc: Run the project tests
     cmds:
       - task: test-plugin
+      - task: test-scripts
 
   test-plugin:
     desc: Validate the z plugin structure
     cmds:
       - '{{.RUN_SCRIPT}} python tests/zenable_guardrails/validate_structure.py'
+
+  test-scripts:
+    desc: Exercise the prfeedback helper scripts against a stubbed gh
+    preconditions:
+      # The scripts shell out to jq; without it every check would fail for the wrong reason
+      - sh: which jq
+        msg: "jq is required to test the prfeedback scripts"
+    cmds:
+      - '{{.RUN_SCRIPT}} python tests/zenable_guardrails/validate_scripts.py'
 
   clean:
     desc: Clean up build artifacts, cache files/directories, temp files, etc.
