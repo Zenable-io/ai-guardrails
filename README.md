@@ -98,44 +98,13 @@ edit with nothing else to configure. What you get:
 
 Deep dive: [Claude Code integration](https://www.zenable.app/docs/integrations/mcp/ide/claude-code)
 
-### Agent Plugins (Cursor, Codex, VS Code, Kiro, Copilot)
+### Agent Plugins
 
 The same package is also a portable
 [Agent Plugins 1.0](https://agent-plugins.org/specification) plugin named
 `zenable`, so clients that implement the spec load the identical ten skills with
-no Zenable-specific glue. Install it through the client's own plugin flow — for
-example, Cursor's **Customize** sidebar, or Codex:
-
-```bash
-codex plugin marketplace add Zenable-io/ai-guardrails
-codex plugin add z@zenable
-```
-
-One directory serves both formats. Claude Code reads
-`.claude-plugin/plugin.json`, `hooks/`, and `skills/`; Agent Plugins clients read
-the root `plugin.json` and `skills/`, and the spec tells them to ignore component
-types they don't support. Every capability is a **skill** rather than a slash
-command precisely because Agent Plugins 1.0 has no portable home for commands —
-so nothing is lost in translation.
-
-Hooks are not portable either, so on these clients run `zenable install <ide>` to
-wire the post-edit review into that editor's own config.
-
-### Why the MCP server isn't bundled
-
-Neither format ships a live MCP config — no `.mcp.json` for Claude Code, no
-`mcp.json` for Agent Plugins — and the structure test fails the build if one
-reappears. To support
-[CIMD (Client ID Metadata Documents)](https://blog.modelcontextprotocol.io/posts/client_registration/#solution-client-id-metadata-documents-cimd),
-users must authenticate out of band their first time, so a bundled server entry
-would leave you configured but unauthorized. Agent Plugins 1.0 doesn't change
-this: it deliberately leaves authentication, trust, and permissions outside the
-portable contract. `zenable install mcp <ide>` manages that login, and already
-covers every compatible client.
-
-If you'd like to talk about this more, or have a solution to that problem, our
-founder would love to hear from you —
-[send him a message](https://linkedin.com/in/jonzeolla).
+no Zenable-specific glue. Install it through the client's own plugin flow, adding
+`Zenable-io/ai-guardrails` as a marketplace and then installing `z@zenable`.
 
 ### Other AI editors
 
