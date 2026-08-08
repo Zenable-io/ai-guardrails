@@ -97,8 +97,10 @@ fi
 # Values reach GitHub as typed GraphQL variables rather than as text spliced into the
 # query, so a repository, path, or comment body carrying quotes cannot become query
 # structure. The body especially: it is free text supplied on the command line.
-# shellcheck disable=SC2016  # $owner and friends are GraphQL variables; the shell must leave them alone
-QUERY='query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+# The quoted heredoc delimiter keeps the shell out of the query: $owner and the rest
+# are GraphQL variable names, bound by the -f arguments below.
+QUERY=$(cat <<'GRAPHQL'
+query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       reviewThreads(first: 100, after: $cursor) {
@@ -107,7 +109,9 @@ QUERY='query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
       }
     }
   }
-}'
+}
+GRAPHQL
+)
 
 # Function to fetch all review threads and find the matching one(s)
 find_thread_ids() {
@@ -188,15 +192,18 @@ else
 fi
 
 # Post comment to the thread using GraphQL mutation
-# shellcheck disable=SC2016  # $threadId and $body are GraphQL variables, sent via -f below
-MUTATION='mutation($threadId: ID!, $body: String!) {
+# $threadId and $body are GraphQL variable names, bound by the -f arguments below.
+MUTATION=$(cat <<'GRAPHQL'
+mutation($threadId: ID!, $body: String!) {
   addPullRequestReviewThreadReply(input: {
     pullRequestReviewThreadId: $threadId,
     body: $body
   }) {
     comment { id }
   }
-}'
+}
+GRAPHQL
+)
 
 response=$(gh api graphql -f query="$MUTATION" \
     -f threadId="$THREAD_ID" -f body="$FINAL_COMMENT_BODY")

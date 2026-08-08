@@ -24,8 +24,10 @@ REPO=$(jq -r '.name' <<<"$REPO_INFO")
 # The owner, repo, and PR number reach GitHub as typed GraphQL variables rather than
 # as text spliced into the query, so a value carrying quotes or braces is data and
 # cannot become query structure.
-# shellcheck disable=SC2016  # $owner and friends are GraphQL variables; the shell must leave them alone
-QUERY='query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
+# The quoted heredoc delimiter keeps the shell out of the query: $owner and the rest
+# are GraphQL variable names, bound by the -f arguments below.
+QUERY=$(cat <<'GRAPHQL'
+query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $pr) {
       reviewThreads(first: 100, after: $cursor) {
@@ -40,7 +42,9 @@ QUERY='query($owner: String!, $repo: String!, $pr: Int!, $cursor: String) {
       }
     }
   }
-}'
+}
+GRAPHQL
+)
 
 # Function to fetch all review threads with pagination
 fetch_all_threads() {
