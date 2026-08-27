@@ -17,6 +17,7 @@ defaults:
 
 env:
   python_version: "3.13"
+  semantic_release_version: "10.6.1"
 
 jobs:
   release:
@@ -37,19 +38,42 @@ jobs:
         with:
           python-version: ${{ env.python_version }}
 
+      - name: Install semantic-release
+        # Installed here rather than via python-semantic-release's own action: that
+        # action builds its image on the runner from a requirements file pinning
+        # only semantic-release itself, so GitPython 3.1.60 — which removed the
+        # `Actor.name_email_regex` that semantic-release reads on every config
+        # load — breaks every run, and no action ref or input avoids it. Owning the
+        # install is what lets us pin. See python-semantic-release#1476; drop the
+        # GitPython pin once the fix (#1477) ships.
+        run: pip install "python-semantic-release==${{ env.semantic_release_version }}" "gitpython<3.1.60"
+
       - name: Run the Release
         id: release
-        uses: python-semantic-release/python-semantic-release@v10
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "Zenable Automation"
-          git_committer_email: "automation@zenable.io"
-          # Tag-only: commit=false leaves main untouched (the push is a no-op the
+        env:
+          # semantic-release reads GH_TOKEN for the tag push and the release API.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "Zenable Automation"
+          git config user.email "automation@zenable.io"
+
+          # `version --print` reports what a release would produce, or the current
+          # version when nothing warrants a bump — so matching the last released
+          # version means this push releases nothing. Both commands are read-only.
+          version="$(semantic-release version --print)"
+          if [[ "$version" == "$(semantic-release version --print-last-released)" ]]; then
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Tag-only: --no-commit leaves main untouched (the push is a no-op the
           # branch ruleset ignores) while the tag still pushes and cuts the release.
-          commit: false
-          tag: true
-          push: true
-          vcs_release: true
+          semantic-release -v version --no-commit --tag --push --vcs-release
+
+          # Only a prerelease carries a `-suffix`.
+          [[ "$version" == *-* ]] && prerelease=true || prerelease=false
+          printf '%s\n' "released=true" "version=$version" "tag=v$version" \
+            "commit_sha=$(git rev-parse HEAD)" "is_prerelease=$prerelease" >> "$GITHUB_OUTPUT"
 
       - name: Move the floating major-version and latest tags
         # Floating tags (like GitHub Actions): v<major> tracks the latest release
