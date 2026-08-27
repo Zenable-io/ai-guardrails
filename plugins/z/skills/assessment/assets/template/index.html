@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Code Scan Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="cover" id="cover">
+  <span class="cover-glow cover-glow-a" aria-hidden="true"></span>
+  <span class="cover-glow cover-glow-b" aria-hidden="true"></span>
+
+  <div class="cover-top">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 45" aria-hidden="true">
+        <path fill="#fff" d="M37.82 9.94 33.77 7.6 31.53 6.3c-.08-.06-.16-.12-.25-.18l-.02.03-3.04 5.27-1.15 1.99-11.01 19.08v.01h9.13l2.15-3.73c.33-.57-.08-1.28-.74-1.28h-4.3l8.23-14.27.2-.34v-.02l1.01.59c1.02.59 1.64 1.67 1.64 2.84v11.98c0 1.17-.62 2.25-1.64 2.84l-1.07.62-8.25 4.76-1.06.61c-1.01.59-2.26.59-3.28 0l-1.01-.58-2.51-1.45-3.04 5.27.27.16 2.24 1.29 4.05 2.34c1.02.59 2.27.59 3.28 0l6.29-3.63 3.85-2.22 6.31-3.64c1.02-.59 1.64-1.67 1.64-2.84V12.79c0-1.17-.62-2.25-1.64-2.84l.01-.01Z"/>
+        <path fill="#00BAAE" d="m14.5 27.48 6.82-11.81 1.86-3.22h-9.12l-2.15 3.73c-.33.57.08 1.28.74 1.28h4.3l-7.52 13.03-.69 1.2-1.01-.58c-1.02-.59-1.64-1.67-1.64-2.84V16.29c0-1.17.62-2.25 1.64-2.84l1.07-.62 8.25-4.76 1.06-.61c1.01-.59 2.26-.59 3.28 0l3.52 2.03.34-.59L27.93 4.23l.02-.03c-.09-.04-.19-.08-.28-.13L25.42 2.78 21.37.44c-1.01-.59-2.26-.59-3.28 0L11.81 4.07 7.95 6.3 1.64 9.94C.63 10.53 0 11.61 0 12.78v19.01c0 1.17.62 2.25 1.64 2.84l4.05 2.34 2.25 1.3.26.15 2.7-4.68.34-.58.37-.65 2.89-5.01v.01Z"/>
+      </svg>
+      <span class="brand-name">Zenable</span>
+    </div>
+    <div class="cover-classification" data-bind="meta.classification"></div>
+  </div>
+
+  <div class="cover-hero">
+    <p class="cover-eyebrow" data-bind="meta.engagement"></p>
+    <h1 class="cover-title">Code Scan Report</h1>
+    <div class="cover-accent" aria-hidden="true"></div>
+    <p class="cover-target" data-bind="meta.target"></p>
+    <p class="cover-version" data-bind="meta.version"></p>
+  </div>
+
+  <div class="cover-foot">
+    <dl class="cover-meta">
+      <div class="meta-pair"><dt>Prepared for</dt><dd data-bind="meta.client"></dd></div>
+      <div class="meta-pair"><dt>Date</dt>         <dd data-bind="meta.date"></dd></div>
+      <div class="meta-pair"><dt>Location</dt>     <dd data-bind="meta.location"></dd></div>
+      <div class="meta-pair"><dt>Prepared by</dt>  <dd>Zenable, Inc.</dd></div>
+      <div class="meta-pair"><dt>Report ID</dt>    <dd data-bind="meta.reportId"></dd></div>
+    </dl>
+  </div>
+
+  <div class="cover-bar" aria-hidden="true"></div>
+</header>
+
+<nav class="toc no-print" aria-label="Table of contents">
+  <div class="toc-group">
+    <h2 class="toc-group-label">Sections</h2>
+    <ol class="toc-list">
+      <li><a href="#summary"><span class="toc-num">1</span><span class="toc-text">Executive Summary</span></a></li>
+      <li><a href="#scope"><span class="toc-num">2</span><span class="toc-text">Scope</span></a></li>
+      <li><a href="#trust"><span class="toc-num">3</span><span class="toc-text">Trust Boundary, Data Flow &amp; Attack Paths</span></a></li>
+      <li><a href="#samm"><span class="toc-num">4</span><span class="toc-text">Software Assurance Maturity</span></a></li>
+      <li><a href="#strengths"><span class="toc-num">5</span><span class="toc-text">Strengths</span></a></li>
+      <li><a href="#heatmap"><span class="toc-num">6</span><span class="toc-text">Risk Matrix</span></a></li>
+      <li><a href="#findings"><span class="toc-num">7</span><span class="toc-text">Findings (Risks)</span></a></li>
+      <li><a href="#cves"><span class="toc-num">8</span><span class="toc-text">Confirmed Exploitable CVEs</span></a></li>
+      <li><a href="#customRequirements"><span class="toc-num">9</span><span class="toc-text">Custom Requirements Review</span></a></li>
+      <li><a href="#recs"><span class="toc-num">10</span><span class="toc-text">Recommendations &amp; Next Steps</span></a></li>
+      <li><a href="#investigator"><span class="toc-num">11</span><span class="toc-text">Investigator Statement</span></a></li>
+    </ol>
+  </div>
+  <div class="toc-group">
+    <h2 class="toc-group-label">Appendices</h2>
+    <ol class="toc-list toc-list--appendix" id="appendixTocList">
+      <li><a href="#appendix-artifacts"><span class="toc-num">A</span><span class="toc-text">Provided Artifacts</span></a></li>
+      <li><a href="#appendix-unconfirmed"><span class="toc-num">B</span><span class="toc-text">Possible (Unconfirmed) Findings</span></a></li>
+      <li><a href="#appendix-repo"><span class="toc-num">C</span><span class="toc-text">Repository History</span></a></li>
+      <li><a href="#appendix-deps"><span class="toc-num">D</span><span class="toc-text">License &amp; Dependency Inventory</span></a></li>
+    </ol>
+  </div>
+</nav>
+
+<main>
+
+  <!-- 1. Executive Summary -->
+  <section id="summary" class="page">
+    <header class="section-head">
+      <h2>1. Executive Summary</h2>
+      <p class="section-lede">Severity counts derive from §7. Click a card to jump to the findings.</p>
+    </header>
+
+    <div class="summary-grid">
+      <div class="severity-chips" id="severityChips" role="toolbar" aria-label="Severity counts">
+        <!-- rendered by app.js: chips per severity, click jumps to Findings -->
+      </div>
+      <ul class="takeaways" id="takeaways">
+        <!-- rendered by app.js -->
+      </ul>
+    </div>
+  </section>
+
+  <!-- 2. Scope -->
+  <section id="scope" class="page">
+    <header class="section-head">
+      <h2>2. Scope</h2>
+    </header>
+
+    <div class="scope-grid">
+      <div>
+        <h3>In Scope</h3>
+        <ul id="scopeIn"></ul>
+      </div>
+      <div>
+        <h3>Out of Scope</h3>
+        <ul id="scopeOut"></ul>
+      </div>
+    </div>
+    <p class="scope-note" id="scopeNotes"></p>
+  </section>
+
+  <!-- 3. Trust Boundary, Data Flow & Attack Paths -->
+  <section id="trust" class="page">
+    <header class="section-head">
+      <h2>3. Trust Boundary, Data Flow &amp; Attack Paths</h2>
+      <p class="section-lede" id="trustSummary"></p>
+    </header>
+    <figure class="trust-figure">
+      <pre class="mermaid" id="trustDiagram"></pre>
+    </figure>
+    <ul class="trust-points" id="trustPoints"></ul>
+    <details class="trust-evidence">
+      <summary>Evidence</summary>
+      <ul id="trustEvidence"></ul>
+    </details>
+
+    <div class="summary-omitted" id="summaryOmitted" hidden>
+      <h3>Additional Report Contents</h3>
+      <p class="summary-omitted-lede">
+        The full report continues with the following sections and appendices.
+      </p>
+      <div class="summary-omitted-grid" id="summaryOmittedGrid"></div>
+    </div>
+
+    <div class="attack-block">
+      <h3 class="attack-subhead">Attack paths</h3>
+      <p class="section-lede" id="attackSummary"></p>
+      <div class="attack-list" id="attackList"></div>
+      <p class="attack-note" id="attackNote"></p>
+    </div>
+  </section>
+
+  <!-- 4. SAMM -->
+  <section id="samm" class="page">
+    <header class="section-head">
+      <h2>4. Software Assurance Maturity</h2>
+      <p class="section-lede">OWASP SAMM-aligned scoring across five domains. Hover a bar for the per-domain summary.</p>
+    </header>
+
+    <figure class="samm-figure">
+      <div class="samm-chart" id="sammChart" aria-label="SAMM chart">
+        <!-- rendered by app.js: bands as background stripes, bars per domain -->
+      </div>
+      <figcaption class="samm-legend" id="sammLegend"></figcaption>
+    </figure>
+  </section>
+
+  <!-- 5. Strengths -->
+  <section id="strengths" class="page">
+    <header class="section-head">
+      <h2>5. Strengths</h2>
+      <p class="section-lede">Positive observations from the provided artifacts.</p>
+    </header>
+    <ul class="strengths-list" id="strengthsList"></ul>
+  </section>
+
+  <!-- 6. Heat Map -->
+  <section id="heatmap" class="page">
+    <header class="section-head">
+      <h2>6. Risk Matrix</h2>
+      <p class="section-lede">Each finding positioned by Impact (y) and Likelihood (x); color = severity; background tint = combined risk zone. Hover for detail, click to jump.</p>
+    </header>
+
+    <div class="heatmap-echarts" id="heatmapChart" role="img" aria-label="Findings heat map"></div>
+
+    <div class="heatmap-key" id="heatmapKey"></div>
+  </section>
+
+  <!-- 7. Findings -->
+  <section id="findings" class="page">
+    <header class="section-head">
+      <h2>7. Findings (Risks)</h2>
+      <p class="section-lede">Click any row to reveal evidence, linked CVEs, and the linked recommendation.</p>
+    </header>
+    <div class="findings-list" id="findingsList"></div>
+  </section>
+
+  <!-- 8. CVEs -->
+  <section id="cves" class="page">
+    <header class="section-head">
+      <h2>8. Confirmed Exploitable CVEs</h2>
+      <p class="section-lede">CVEs with a confirmed exploitable pathway through this code. Dependency CVEs without a usable code path are summarized in finding F1 and not enumerated individually.</p>
+    </header>
+    <div class="cves-list" id="cvesList"></div>
+  </section>
+
+  <!-- 9. Custom Requirements Review -->
+  <section id="customRequirements" class="page">
+    <header class="section-head">
+      <h2>9. Custom Requirements Review</h2>
+      <p class="section-lede" data-bind="customRequirements.summary"></p>
+    </header>
+    <div class="tokenization-list" id="customRequirementsList"></div>
+  </section>
+
+  <!-- 10. Recommendations -->
+  <section id="recs" class="page">
+    <header class="section-head">
+      <h2>10. Recommendations &amp; Next Steps</h2>
+      <p class="section-lede">Each recommendation links back to its source finding. Hover a recommendation to highlight that finding in §6.</p>
+    </header>
+    <div class="recs-list" id="recsList"></div>
+  </section>
+
+  <!-- 11. Investigator -->
+  <section id="investigator" class="page">
+    <header class="section-head">
+      <h2>11. Investigator Statement</h2>
+    </header>
+    <div class="investigator">
+      <p id="investigatorStatement"></p>
+      <dl class="investigator-meta">
+        <dt>Primary Investigator</dt> <dd data-bind="investigator.primary"></dd>
+        <dt>Title</dt>                 <dd data-bind="investigator.title"></dd>
+        <dt>Other Contributors</dt>    <dd id="investigatorContributors"></dd>
+        <dt>Date of Analysis</dt>      <dd data-bind="investigator.analysisDates"></dd>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Appendix A -->
+  <section id="appendix-artifacts" class="page">
+    <header class="section-head">
+      <h2>Appendix A — Provided Artifacts</h2>
+      <p class="section-lede" id="appendixANote"></p>
+    </header>
+    <table class="artifacts-table">
+      <thead>
+        <tr><th>Name</th><th>Kind</th><th>SHA-256</th></tr>
+      </thead>
+      <tbody id="artifactsBody"></tbody>
+    </table>
+  </section>
+
+  <!-- Appendix B (optional) -->
+  <section id="appendix-unconfirmed" class="page">
+    <header class="section-head">
+      <h2>Appendix B — Possible (Unconfirmed) Findings</h2>
+      <p class="section-lede">Items worth further research. Not part of the assessed risk above.</p>
+    </header>
+    <ul class="unconfirmed-list" id="unconfirmedList"></ul>
+  </section>
+
+  <!-- Appendix C — Repository History (git-derived metrics) -->
+  <section id="appendix-repo" class="page">
+    <header class="section-head">
+      <h2>Appendix C — Repository History</h2>
+      <p class="section-lede" id="repoMetricsLede">
+        Derived from <code>git log</code> on the provided working copy. PR-workflow figures use merge
+        commits with subjects matching <em>"Merge pull request"</em>; PR open duration is estimated as
+        merge time minus the earliest commit on the feature branch (after the merge-base of the two parents).
+      </p>
+    </header>
+
+    <h3>C.1 — Summary</h3>
+    <div class="metrics-cards" id="repoSummaryCards"></div>
+
+    <div id="repoPrSection">
+      <h3 style="margin-top:18px;">C.2 — Pull Request workflow</h3>
+      <div class="metrics-cards" id="repoPrCards"></div>
+    </div>
+
+    <h3 style="margin-top:18px;">C.3 — Code contributors
+      <span class="section-lede" style="display:inline; margin-left:8px;">(cumulative, top 20 authors, animated by month)</span>
+    </h3>
+    <div class="race-panel">
+      <div class="race-controls no-print">
+        <div class="race-dim" role="radiogroup" aria-label="Race dimension">
+          <button type="button" id="raceDimCommits" class="race-dim-btn is-active" data-dim="commits" role="radio" aria-checked="true">Commits</button>
+          <button type="button" id="raceDimLoc"     class="race-dim-btn"           data-dim="loc"     role="radio" aria-checked="false">LoC changed</button>
+        </div>
+        <button type="button" id="racePlay" class="race-btn">&#9654; Play</button>
+        <button type="button" id="raceReset" class="race-btn race-btn-secondary">Reset</button>
+        <span class="race-now" id="raceNowLabel">&mdash;</span>
+        <input type="range" id="raceScrub" min="0" max="0" value="0" />
+      </div>
+      <div class="race-chart" id="raceChart"></div>
+    </div>
+
+    <h3 style="margin-top:18px;">C.4 — Activity per year</h3>
+    <div class="yearly-chart" id="yearlyChart"></div>
+
+    <h3 style="margin-top:18px;">C.5 — Commit size over time
+      <span class="section-lede" style="display:inline; margin-left:8px;">(lines added &amp; deleted per month; line overlay = mean commit size)</span>
+    </h3>
+    <div class="commit-size-chart" id="commitSizeChart"></div>
+
+    <h3 style="margin-top:18px;">C.6 — All authors
+      <span class="section-lede" style="display:inline; margin-left:8px;">(click a column header to sort)</span>
+    </h3>
+    <div class="authors-table-wrap">
+      <table class="authors-table" id="authorsTable">
+        <thead>
+          <tr>
+            <th data-key="rank" data-type="num">#<span class="arrow"></span></th>
+            <th data-key="author" data-type="str">Author<span class="arrow"></span></th>
+            <th class="num" data-key="commits" data-type="num">Commits<span class="arrow"></span></th>
+            <th class="num" data-key="additions" data-type="num">Lines added<span class="arrow"></span></th>
+            <th class="num" data-key="deletions" data-type="num">Lines removed<span class="arrow"></span></th>
+            <th data-key="first_commit" data-type="date">First commit<span class="arrow"></span></th>
+            <th data-key="last_commit" data-type="date">Last commit<span class="arrow"></span></th>
+            <th class="num" data-key="span_days" data-type="num">Active span (days)<span class="arrow"></span></th>
+            <th data-key="emails" data-type="str">Emails<span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Appendix D — License & Dependency Inventory -->
+  <section id="appendix-deps" class="page">
+    <header class="section-head">
+      <h2>Appendix D &mdash; License &amp; Dependency Inventory</h2>
+      <p class="section-lede" id="appendixDNote"></p>
+    </header>
+
+    <h3>D.1 &mdash; Scan provenance</h3>
+    <table class="artifacts-table">
+      <thead>
+        <tr><th>Tool</th><th>Version</th><th>Target</th><th>Output</th><th>Result</th></tr>
+      </thead>
+      <tbody id="depScansBody"></tbody>
+    </table>
+
+    <h3 style="margin-top:18px;">D.2 &mdash; Component inventory</h3>
+    <table class="artifacts-table">
+      <thead>
+        <tr><th>Name</th><th>Version</th><th>Type</th><th>Licenses</th><th>Seen in</th></tr>
+      </thead>
+      <tbody id="depComponentsBody"></tbody>
+    </table>
+
+    <h3 style="margin-top:18px;">D.3 &mdash; License summary</h3>
+    <table class="artifacts-table">
+      <thead>
+        <tr><th>License</th><th>Components</th></tr>
+      </thead>
+      <tbody id="depLicensesBody"></tbody>
+    </table>
+
+    <h3 style="margin-top:18px;">D.4 &mdash; Known vulnerabilities</h3>
+    <p class="section-lede" id="depVulnsEmpty"></p>
+    <table class="artifacts-table">
+      <thead>
+        <tr><th>ID</th><th>Severity</th><th>Package</th><th>Version</th><th>Fixed in</th></tr>
+      </thead>
+      <tbody id="depVulnsBody"></tbody>
+    </table>
+  </section>
+
+  <div id="extensionAppendices"></div>
+
+</main>
+
+<!-- Inline git-history metrics. Rewritten in place by extract_metrics.py
+     between the DATA-BEGIN / DATA-END markers. -->
+<script id="metrics-data" type="application/json">
+<!-- DATA-BEGIN -->null<!-- DATA-END -->
+</script>
+
+<!-- Inline evidence registries. Each block is rewritten in place by its
+     transform script (scripts/*.py) between its BEGIN/END markers, so every
+     number in Appendices A/D and the secrets/experiments evidence traces to a
+     generated artifact rather than a hand-typed value. `null` means the
+     matching appendix has not been generated yet. -->
+<script id="artifacts-data" type="application/json">
+<!-- ARTIFACTS-BEGIN -->null<!-- ARTIFACTS-END -->
+</script>
+<script id="dependencies-data" type="application/json">
+<!-- DEPENDENCIES-BEGIN -->null<!-- DEPENDENCIES-END -->
+</script>
+<script id="secrets-data" type="application/json">
+<!-- SECRETS-BEGIN -->null<!-- SECRETS-END -->
+</script>
+<script id="experiments-data" type="application/json">
+<!-- EXPERIMENTS-BEGIN -->null<!-- EXPERIMENTS-END -->
+</script>
+<script id="extensions-data" type="application/json">
+<!-- EXTENSIONS-BEGIN -->null<!-- EXTENSIONS-END -->
+</script>
+
+<footer class="report-footer">
+  <p><span data-bind="meta.classification"></span> — Prepared by Zenable, Inc. — Report ID <span data-bind="meta.reportId"></span></p>
+</footer>
+
+<button type="button" class="theme-toggle no-print" id="themeToggle" aria-label="Toggle dark mode" title="Toggle theme"></button>
+
+<!-- echarts + mermaid are the report's only remote resources; everything else
+     (app.js, styles, data) is inlined. app.js loads them DYNAMICALLY (see
+     CHART_LIBS: versioned, SRI-pinned, self-hosted by the Zenable app — never
+     a third-party CDN).
+     Deliberately NO static <script src> tags for them: a classic script blocks
+     the HTML parser, so a network middlebox that accepts the request and never
+     responds would wedge the whole report before it hydrates. -->
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

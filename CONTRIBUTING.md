@@ -110,6 +110,11 @@ ai-guardrails/
 │       ├── scripts/
 │       │   └── bootstrap.sh      # SessionStart CLI bootstrap
 │       └── skills/               # Shared by BOTH formats
+│           ├── assessment/       # /z:assessment — setup + validation + reporting
+│           │   ├── SKILL.md
+│           │   ├── assets/       # HTML report template + workspace rules
+│           │   ├── references/   # Evidence-model tool reference
+│           │   └── scripts/      # Evidence transforms + bundle builder (+ tests)
 │           ├── guardrails-reviewer/
 │           │   └── SKILL.md      # Autonomous conformance reviewer
 │           ├── setup/            # /z:setup onboarding
