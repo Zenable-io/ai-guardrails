@@ -18,6 +18,15 @@ Repository = "https://github.com/Zenable-io/ai-guardrails"
 [tool.uv]
 managed = true
 
+# The assessment skill's report tooling ships its own tests. They run through an
+# ephemeral `uv run --with pytest` (see Taskfile) so the repo keeps zero locked
+# dependencies; this block only registers the markers those tests use.
+[tool.pytest.ini_options]
+markers = [
+    "unit: fast, isolated test with no external dependencies",
+    "integration: exercises real files, subprocesses, or tools",
+]
+
 [tool.uv.pip]
 universal = true
 generate-hashes = true
