@@ -1690,18 +1690,27 @@
       });
       tbody.innerHTML = "";
       const fmt = (n) => (n == null ? "" : Number(n).toLocaleString());
+      // Cells are built with textContent, never innerHTML. Author names, emails,
+      // and dates come from the ASSESSED repo's git history — untrusted
+      // third-party input by definition — so anyone who can land a commit there
+      // could otherwise store script in the report the reviewer opens.
+      const cell = (tr, value, className) => {
+        const td = document.createElement("td");
+        if (className) td.className = className;
+        td.textContent = value == null ? "" : String(value);
+        tr.appendChild(td);
+      };
       for (const a of rows) {
         const tr = document.createElement("tr");
-        tr.innerHTML =
-          `<td class="num">${a.rank}</td>` +
-          `<td>${a.author}</td>` +
-          `<td class="num">${fmt(a.commits)}</td>` +
-          `<td class="num">${fmt(a.additions)}</td>` +
-          `<td class="num">${fmt(a.deletions)}</td>` +
-          `<td>${a.first_commit}</td>` +
-          `<td>${a.last_commit}</td>` +
-          `<td class="num">${fmt(a.span_days)}</td>` +
-          `<td class="emails">${(a.emails || []).join(", ")}</td>`;
+        cell(tr, a.rank, "num");
+        cell(tr, a.author);
+        cell(tr, fmt(a.commits), "num");
+        cell(tr, fmt(a.additions), "num");
+        cell(tr, fmt(a.deletions), "num");
+        cell(tr, a.first_commit);
+        cell(tr, a.last_commit);
+        cell(tr, fmt(a.span_days), "num");
+        cell(tr, (a.emails || []).join(", "), "emails");
         tbody.appendChild(tr);
       }
       for (const h of headers) {
