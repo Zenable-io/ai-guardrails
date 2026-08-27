@@ -94,6 +94,7 @@ tasks:
     cmds:
       - task: test-plugin
       - task: test-scripts
+      - task: test-assessment-scripts
 
   test-plugin:
     desc: Validate the z plugin structure
@@ -108,6 +109,18 @@ tasks:
         msg: "jq is required to test the prfeedback scripts"
     cmds:
       - '{{.RUN_SCRIPT}} python tests/zenable_guardrails/validate_scripts.py'
+
+  test-assessment-scripts:
+    desc: Test the assessment skill's report-generation tooling
+    preconditions:
+      - which uv
+      - uv --version
+    cmds:
+      # pytest is pulled ephemerally rather than locked: this repo ships a plugin,
+      # not a package, and keeping `dependencies = []` keeps its supply-chain
+      # surface at zero. --exclude-newer gives a freshly published (potentially
+      # compromised) release time to be caught before we pull it in.
+      - uv run --with pytest --exclude-newer "7 days" --no-project pytest plugins/z/skills/assessment/scripts/tests -q
 
   clean:
     desc: Clean up build artifacts, cache files/directories, temp files, etc.
