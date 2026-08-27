@@ -17,6 +17,7 @@ defaults:
 
 env:
   python_version: "3.13"
+  semantic_release_version: "10.6.1"
 
 jobs:
   release:
@@ -37,19 +38,54 @@ jobs:
         with:
           python-version: ${{ env.python_version }}
 
+      - name: Install semantic-release
+        # We install the CLI ourselves instead of using the upstream composite
+        # action. That action builds its Docker image on the runner from an
+        # unpinned requirements file, so GitPython 3.1.60 — which removed
+        # `Actor.name_email_regex`, an attribute semantic-release reads on every
+        # config load — broke every release run, including reruns of workflows
+        # that hadn't changed in months. There is no action input to constrain
+        # the image's transitive deps, so pinning here is the only fix available
+        # to a caller. See python-semantic-release#1476; drop the GitPython pin
+        # once the fix (#1477) ships in a release.
+        run: pip install "python-semantic-release==${{ env.semantic_release_version }}" "gitpython<3.1.60"
+
       - name: Run the Release
         id: release
-        uses: python-semantic-release/python-semantic-release@v10
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          git_committer_name: "Zenable Automation"
-          git_committer_email: "automation@zenable.io"
-          # Tag-only: commit=false leaves main untouched (the push is a no-op the
+        env:
+          # semantic-release reads GH_TOKEN for the release API and the tag push.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "Zenable Automation"
+          git config user.email "automation@zenable.io"
+
+          # `version --print` reports the version that a release would produce,
+          # falling back to the current version when nothing warrants a bump, so
+          # comparing it against the last released version tells us whether this
+          # push releases anything. Both are read-only.
+          # Tolerate a failure here only: a repo with no prior release has no
+          # last version to print. `--print` stays strict — an empty result there
+          # means something is wrong, not that there's nothing to release.
+          last="$(semantic-release version --print-last-released || true)"
+          next="$(semantic-release version --print)"
+
+          if [[ -z "$next" || "$next" == "$last" ]]; then
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Tag-only: --no-commit leaves main untouched (the push is a no-op the
           # branch ruleset ignores) while the tag still pushes and cuts the release.
-          commit: false
-          tag: true
-          push: true
-          vcs_release: true
+          semantic-release -v version --no-commit --tag --push --vcs-release
+
+          {
+            echo "released=true"
+            echo "version=$next"
+            echo "tag=v$next"
+            echo "commit_sha=$(git rev-parse HEAD)"
+            # A PEP 440 / SemVer prerelease is the only kind carrying a `-suffix`.
+            if [[ "$next" == *-* ]]; then echo "is_prerelease=true"; else echo "is_prerelease=false"; fi
+          } >> "$GITHUB_OUTPUT"
 
       - name: Move the floating major-version and latest tags
         # Floating tags (like GitHub Actions): v<major> tracks the latest release
