@@ -84,15 +84,19 @@ Ask the Zenable MCP whether this repository is known to the tenant. If it resolv
 
 Establish a workspace inside the target repo (or cwd if there is no repo). Default location: `./zenable-setup/<UTC-timestamp>/`. Confirm the location with the user before creating it.
 
+**If another skill invoked this one and named a workspace, use that path instead** and skip the confirmation — it already has the user's sign-off, and a second directory splits one engagement's audit trail across two places.
+
 **Working note filenames:**
 
 - `sources.md` — what was discovered or provided, where each came from, and what couldn't be reached
 - `candidates.md` — the mined candidate pool, clustered, with triage outcomes including what was cut and why
-- `context.md` — codebase and engagement context that isn't a requirement itself
+- `codebase-context.md` — codebase and engagement context that isn't a requirement itself
 - `requirements.md` — final adopted requirements with Zenable IDs and the scopes applied to each
 - `simulated-calls.md` — only when the Zenable MCP/CLI aren't available; an explicit log of what would have been called, with synthesized responses marked as such
 
 If you find yourself collapsing these into one file, you've lost the audit trail. Keep them separate.
+
+**Source material goes in `context/`, unchanged.** Anything the user hands over rather than something you wrote — a pasted wiki export, a downloaded standard, a design doc, a screenshot — belongs under `<workspace>/context/` exactly as received. Do not edit, redact, summarize, or convert it in place; cite it from `sources.md` and put any derived reading in the notes above. A rewritten source can't be re-checked later, and provenance is most of what makes a mined requirement defensible.
 
 ## Phase 1 — Gather Context
 
@@ -122,7 +126,7 @@ The linter, static-analysis, CI, and hook configs are not requirement sources �
 **Then ask what's missing**, ordered by whether the user can realistically reach it in one sitting:
 
 - **Reachable now** — anything else on disk, or a public URL you can fetch: engineering blog posts about how they build, public docs, a trust center page
-- **Needs pasting or export** — Confluence, Notion, Google Docs, internal wikis
+- **Needs pasting or export** — Confluence, Notion, Google Docs, internal wikis. Save whatever they paste or export under `<workspace>/context/` as received
 - **Probably out of reach solo** — customer contracts, DPAs, security addenda, SLAs, pentest reports, prior audit findings. Mention these once as high-value if they happen to have them; do not chase them. A developer is not going to get the MSA from legal today.
 
 Record everything found or provided in `sources.md`, including what was named but unreachable — that's a useful list for a later session.
@@ -177,7 +181,7 @@ Record every cut in `candidates.md` with a one-line reason. Dropped is not delet
 - **Scope boundaries.** Does this cover the whole repo, or one package inside a monorepo? Which directories are in play, and is anything explicitly out of scope?
 - **Roadmap.** Mid-migration, or planning one? This affects requirement durability, and it opens a valuable class of rule: enforcing migration direction, so new code stops using the pattern being retired.
 
-Record codebase and engagement context in `context.md`. Where the user doesn't know — what the official standard says, what was promised contractually, who owns a subsystem — record it as unknown and move on. Do not force an answer, and flag any requirement resting on an uncertain premise so it can be revisited.
+Record codebase and engagement context in `codebase-context.md`. Where the user doesn't know — what the official standard says, what was promised contractually, who owns a subsystem — record it as unknown and move on. Do not force an answer, and flag any requirement resting on an uncertain premise so it can be revisited.
 
 ## Phase 2 — Onboard
 
