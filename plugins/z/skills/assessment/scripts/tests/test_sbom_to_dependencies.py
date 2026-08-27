@@ -4,14 +4,12 @@ Run from the skill scripts dir:  uv run --with pytest pytest tests/
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
+from conftest import load_script
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import sbom_to_dependencies as sd
+sd = load_script("sbom_to_dependencies")
 
 
 def _syft(target: str, artifacts: list[dict]) -> dict:

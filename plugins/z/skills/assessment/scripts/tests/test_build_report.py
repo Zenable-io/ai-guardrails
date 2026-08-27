@@ -1,15 +1,11 @@
-import importlib.util
 import json
 import zipfile
 from pathlib import Path
 
 import pytest
+from conftest import load_script
 
-SCRIPT = Path(__file__).resolve().parents[1] / "build_report.py"
-spec = importlib.util.spec_from_file_location("build_report", SCRIPT)
-build_report = importlib.util.module_from_spec(spec)
-assert spec.loader is not None
-spec.loader.exec_module(build_report)
+build_report = load_script("build_report")
 
 
 def _write_report(report_dir: Path, *, extra_resource: str = "") -> None:

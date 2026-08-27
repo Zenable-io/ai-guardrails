@@ -4,14 +4,12 @@ Run from the skill scripts dir:  uv run --with pytest pytest tests/
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
+from conftest import load_script
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import collect_experiments as ce
+ce = load_script("collect_experiments")
 
 
 def _exp(tmp: Path, name: str, doc: dict) -> Path:

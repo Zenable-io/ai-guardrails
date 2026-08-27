@@ -6,14 +6,12 @@ Run from the skill scripts dir:  uv run --with pytest pytest tests/
 import hashlib
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
+from conftest import load_script
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import hash_artifacts as ha
+ha = load_script("hash_artifacts")
 
 # Absolute, is_absolute()-validated git path passed directly to subprocess (no
 # str() wrap, never resolved through PATH) — see the

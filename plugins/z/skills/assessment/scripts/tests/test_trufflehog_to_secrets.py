@@ -4,14 +4,12 @@ Run from the skill scripts dir:  uv run --with pytest pytest tests/
 """
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
+from conftest import load_script
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import trufflehog_to_secrets as ts
+ts = load_script("trufflehog_to_secrets")
 
 
 def _ndjson(tmp: Path, name: str, records: list[dict]) -> Path:
