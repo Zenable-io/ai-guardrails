@@ -444,8 +444,21 @@ source order — so reordering or rescoring renumbers everything automatically.
 Reference another item from prose as `[[key]]` and the renderer resolves it to
 the live id and link. Link findings from recommendations via
 `relatedFindingKeys`, from attack paths via `chain`, and a finding's
-recommendation via `recommendationKey`. Never write a literal `F-007` in prose.
+recommendation via `recommendationKey`.
 Generate a fresh key per new item (any short random base36 string).
+
+**Never write a literal `F-007` (or `S-002` / `REC-01` / `AP-3`) anywhere** —
+prose, evidence, attack-path steps, and above all the `mermaid` diagram source,
+where hardcoded edge labels are easy to miss. A literal names a *slot*, not an
+item: add a finding or rescore one and it silently starts pointing at something
+else. `[[key]]` renumbers itself; a literal does not. `app.js` warns to the
+browser console at load and `build_report.py` refuses to build the bundle, but
+both fire after you have already written it — use `[[key]]` from the start.
+
+Prose fields (`detail`, `finding`, `followUp`, `points`, `steps`, evidence
+entries, takeaways) accept inline markdown: `` `code` ``, `**bold**`, `[label](url)`,
+bare URLs (auto-footnoted), `[[key]]` cross-refs, `- ` bullets, `#### ` subheads,
+and GFM pipe tables (a header row, a `|---|---|` separator, then body rows).
 
 Fill in:
 
@@ -485,13 +498,36 @@ generated blocks. Re-run a transform any time its source tool output or an
 experiment output changes.
 
 The report HTML is otherwise self-contained: `styles.css`, `data.js`, and
-`app.js` are inlined by the bundle builder. The chart libraries are not copied
-into each report — they are version-pinned static files hosted by the Zenable
+`app.js` are inlined by the bundle builder. The chart libraries are not packaged
+into the deliverable — they are version-pinned static files hosted by the Zenable
 app (`/report-assets/echarts-*.min.js`, `/report-assets/mermaid-*.min.js`),
 loaded DYNAMICALLY by `app.js` (`CHART_LIBS`, with SRI pins) and never via static
 `<script src>` tags, which block the HTML parser and let a stalled network
-middlebox wedge the whole report. Do not add `vendor/` copies of these libraries
-to the skill or to report workspaces.
+middlebox wedge the whole report. **At runtime the hosted copy is always what
+loads** — `app.js` reaches for the root-relative `/report-assets/` path first on
+any http(s) origin.
+
+### Vendor the chart libraries for local review
+
+Before opening `report/index.html` locally, run:
+
+```bash
+uv run --script <skill-path>/scripts/fetch_chart_libs.py \
+  --report-dir <workspace>/report
+```
+
+A `file://` page cannot resolve the root-relative `/report-assets/` path, and a
+`file://` response is opaque so the browser can never verify the SRI pin — it
+blocks the script outright rather than degrading. Without this step local review
+silently loses the risk matrix, the data-flow diagram, and every Appendix C
+chart, which is exactly the part of the walkthrough that needs eyes on it.
+
+The script downloads the SAME pinned files, verifies their bytes against the SAME
+sha384 pins in `app.js`, and writes them to `<workspace>/report/report-assets/`.
+`app.js` reads that directory only when the page is on `file://`, so a hosted
+report is unaffected, and `build_report.py` emits only `report.html` from the
+report directory, so the vendored copies never reach the bundle. Pass
+`--subdomain <env>` to pull from a non-production environment.
 
 ### Build the bundle
 
@@ -517,8 +553,11 @@ from `app.js`, and the builder fails on any static tag that remains.
 
 ### Open the report
 
-Open `report/index.html` in the user's browser for local review and walk them
-through it section by section. At each section, ask:
+Run `fetch_chart_libs.py` (above) if you have not already, then open
+`report/index.html` in the user's browser for local review and walk them through
+it section by section. Check the browser console once on load: `app.js` warns
+there about hardcoded display ids, and a warning means a cross-ref is pointing at
+the wrong item somewhere in the report. At each section, ask:
 
 - Does this match how you'd characterize it?
 - Anything missing?
@@ -714,14 +753,21 @@ right; that sign-off is the real exit criterion for the engagement.
   `assessment-bundle.zip`; inlines `styles.css`, `data.js`, and `app.js` into
   `report.html`, derives `meta.json`, copies context, evidence, and experiments,
   and preserves the root-relative `/report-assets/` chart-library references.
+  Refuses to build if `data.js` hardcodes a derived display id (`F-004`,
+  `REC-01`, …) instead of a `[[key]]` cross-ref.
+- `scripts/fetch_chart_libs.py` — vendors the SRI-pinned echarts/mermaid bundles
+  into `<workspace>/report/report-assets/` so the report renders its charts when
+  opened from `file://`. Pins are parsed out of `app.js`, so a version bump is a
+  one-place change. Local review only; never packaged into the bundle.
 - Every transform takes `--out <evidence/x.json>` and an optional
   `--html <report/index.html>` to inline at build time between its
   `<!-- *-BEGIN/END -->` markers. Tests live in `scripts/tests/`
   (`uv run --with pytest pytest scripts/tests/`).
 - `assets/template/` — the report template (`index.html`, `app.js`, `styles.css`,
   `data.js`). Copy it to `<workspace>/report/` at workspace setup and edit the
-  copy. It references `/report-assets/echarts-5.6.1.min.js` and
-  `/report-assets/mermaid-11.15.0.min.js`; do not vendor those files.
+  copy. It loads `echarts-5.6.1.min.js` and `mermaid-11.15.0.min.js` from
+  `/report-assets/` at runtime; vendor them locally with `fetch_chart_libs.py`
+  for `file://` review.
 - `assets/workspace/` — `AGENTS.md` + `CLAUDE.md` copied into the workspace so
   the deterministic evidence posture survives the skill run.
 - `references/EVIDENCE-MODEL.md` — the evidence model (Derived / Analysis /

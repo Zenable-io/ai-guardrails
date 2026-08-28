@@ -329,7 +329,20 @@
       <p class="section-lede" id="appendixDNote"></p>
     </header>
 
-    <h3>D.1 &mdash; Scan provenance</h3>
+    <!-- Known vulnerabilities lead the appendix: it is the only subsection a
+         reader acts on, and burying it under three inventory tables meant it
+         was reached last (or not at all). Inventory and provenance follow as
+         the backing detail. -->
+    <h3>D.1 &mdash; Known vulnerabilities</h3>
+    <p class="section-lede" id="depVulnsEmpty"></p>
+    <table class="artifacts-table">
+      <thead>
+        <tr><th>ID</th><th>Severity</th><th>Package</th><th>Version</th><th>Fixed in</th></tr>
+      </thead>
+      <tbody id="depVulnsBody"></tbody>
+    </table>
+
+    <h3 style="margin-top:18px;">D.2 &mdash; Scan provenance</h3>
     <table class="artifacts-table">
       <thead>
         <tr><th>Tool</th><th>Version</th><th>Target</th><th>Output</th><th>Result</th></tr>
@@ -337,7 +350,7 @@
       <tbody id="depScansBody"></tbody>
     </table>
 
-    <h3 style="margin-top:18px;">D.2 &mdash; Component inventory</h3>
+    <h3 style="margin-top:18px;">D.3 &mdash; Component inventory</h3>
     <table class="artifacts-table">
       <thead>
         <tr><th>Name</th><th>Version</th><th>Type</th><th>Licenses</th><th>Seen in</th></tr>
@@ -345,21 +358,12 @@
       <tbody id="depComponentsBody"></tbody>
     </table>
 
-    <h3 style="margin-top:18px;">D.3 &mdash; License summary</h3>
+    <h3 style="margin-top:18px;">D.4 &mdash; License summary</h3>
     <table class="artifacts-table">
       <thead>
         <tr><th>License</th><th>Components</th></tr>
       </thead>
       <tbody id="depLicensesBody"></tbody>
-    </table>
-
-    <h3 style="margin-top:18px;">D.4 &mdash; Known vulnerabilities</h3>
-    <p class="section-lede" id="depVulnsEmpty"></p>
-    <table class="artifacts-table">
-      <thead>
-        <tr><th>ID</th><th>Severity</th><th>Package</th><th>Version</th><th>Fixed in</th></tr>
-      </thead>
-      <tbody id="depVulnsBody"></tbody>
     </table>
   </section>
 
