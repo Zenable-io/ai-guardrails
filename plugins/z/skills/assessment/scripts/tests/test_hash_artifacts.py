@@ -13,32 +13,35 @@ from conftest import load_script
 
 ha = load_script("hash_artifacts")
 
-# Absolute, is_absolute()-validated git path passed directly to subprocess (no
-# str() wrap, never resolved through PATH) — see the
-# require-absolute-path-in-subprocess policy.
-_GIT = Path(shutil.which("git") or "")
-if not _GIT.is_absolute():
-    raise RuntimeError("git executable not found on PATH")
 
-
-def _git(repo: Path, *args: str) -> None:
-    subprocess.run([_GIT, *args], cwd=repo, check=True, capture_output=True, text=True)
+def _run_git(*, args: list[str], cwd: Path) -> str:
+    # git needs the inherited PATH for its own subcommands, so the env={"PATH": ""}
+    # defense other subprocess calls use is unavailable; resolve and guard instead.
+    found = shutil.which("git")
+    if found is None:
+        raise SystemExit("git was not found on PATH")
+    git = Path(found)
+    if not git.is_absolute():
+        raise SystemExit(f"git resolved to a relative path: {git}")
+    return subprocess.run(
+        [git, *args], cwd=cwd, capture_output=True, text=True, check=True
+    ).stdout
 
 
 @pytest.fixture
 def repo(tmp_path: Path) -> Path:
     r = tmp_path / "repo"
     r.mkdir()
-    _git(r, "init", "-q")
-    _git(r, "config", "user.email", "t@example.com")
-    _git(r, "config", "user.name", "Test")
+    _run_git(args=["init", "-q"], cwd=r)
+    _run_git(args=["config", "user.email", "t@example.com"], cwd=r)
+    _run_git(args=["config", "user.name", "Test"], cwd=r)
     (r / "a.txt").write_bytes(b"hello\n")
     (r / "sub").mkdir()
     (r / "sub" / "b.txt").write_bytes(b"world\n")
     (r / "target").mkdir()
     (r / "target" / "junk.bin").write_bytes(b"BUILD ARTIFACT\n")
-    _git(r, "add", "-A")
-    _git(r, "commit", "-qm", "init")
+    _run_git(args=["add", "-A"], cwd=r)
+    _run_git(args=["commit", "-qm", "init"], cwd=r)
     return r
 
 
@@ -97,13 +100,7 @@ def test_git_directory_skipped_in_tree_mode(repo: Path) -> None:
     assert item.get("skipped") is True
     assert "sha256" not in item
     # Same behavior under commit mode (where it would produce an empty tree hash).
-    head = subprocess.run(
-        [_GIT, "rev-parse", "HEAD"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    head = _run_git(args=["rev-parse", "HEAD"], cwd=repo).strip()
     item_commit = ha.hash_item(
         {"name": ".git (vcs)", "kind": "vcs", "mode": "tree", "path": ".git"}, head
     )
@@ -113,13 +110,7 @@ def test_git_directory_skipped_in_tree_mode(repo: Path) -> None:
 @pytest.mark.unit
 def test_commit_mode_is_reproducible_and_ignores_worktree(repo: Path) -> None:
     ha.REPO_ROOT = repo
-    head = subprocess.run(
-        [_GIT, "rev-parse", "HEAD"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    head = _run_git(args=["rev-parse", "HEAD"], cwd=repo).strip()
     pinned = ha.hash_item({"name": "a.txt", "mode": "file", "path": "a.txt"}, head)
     # Dirty the working tree; the committed hash must not move.
     (repo / "a.txt").write_bytes(b"TAMPERED\n")
@@ -137,13 +128,7 @@ def test_commit_mode_is_reproducible_and_ignores_worktree(repo: Path) -> None:
 @pytest.mark.unit
 def test_uncommitted_file_under_commit_flags_not_reproducible(repo: Path) -> None:
     ha.REPO_ROOT = repo
-    head = subprocess.run(
-        [_GIT, "rev-parse", "HEAD"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.strip()
+    head = _run_git(args=["rev-parse", "HEAD"], cwd=repo).strip()
     (repo / "oob.jar").write_bytes(b"out of band\n")  # never committed
     item = ha.hash_item({"name": "oob.jar", "mode": "file", "path": "oob.jar"}, head)
     assert item["sha256"] == hashlib.sha256(b"out of band\n").hexdigest()
