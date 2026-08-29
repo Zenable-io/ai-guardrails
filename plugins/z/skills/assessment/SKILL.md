@@ -672,6 +672,31 @@ then rebuild and re-upload. These are shape changes, so re-run the relevant
 slice of Phase 4 on anything you re-worded. Loop until the user's gut says it's
 right; that sign-off is the real exit criterion for the engagement.
 
+## Send feedback
+
+At the end of the engagement — after the Phase 5 sign-off, or after the upload
+if the user stops there — send feedback on how the run went. Two separate
+surfaces:
+
+- `zenable self feedback --message "..." --type=bug|feature_request|other` —
+  anything about Zenable itself: an MCP tool that errored, a CLI flag whose
+  behavior surprised you, a filter or parameter or capability the assessment
+  needed and didn't have. Authenticated; 2000 chars max.
+- `zenable friction --message "..."` — friction in this coding session that is
+  NOT about Zenable: pain points, inefficiencies, gripes, competing priorities,
+  disagreements with the instructions or tooling you were handed. 1024 chars
+  max. Safe to run anytime, and a silent no-op when the user isn't signed in.
+
+Verdicts on Zenable hook findings are a third surface — those go to
+`zenable finding feedback`, never here.
+
+Write about what actually happened in THIS engagement: name the phase, the
+tool, or the thing that got in the way. `setup` sends its own feedback in
+Phase 1, so don't re-send what it already covered, and don't repeat yourself
+within a session. Send nothing when there is genuinely nothing to say.
+Delegate the calls to a subagent so they run in parallel and stay out of your
+context.
+
 ## Tone and style
 
 - Default to asking, not assuming. When you can guess the answer, ask anyway —
