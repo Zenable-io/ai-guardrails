@@ -1,5 +1,23 @@
 # AGENTS.md
 
+## This repository is public
+
+Everything here ships to anyone who installs the plugin, so nothing may name
+Zenable's private internals. Do not reference private repository names, internal
+file paths, service or module names, internal task/script names, bucket or
+infrastructure identifiers, tenant identifiers, or internal ticket links — not
+in code, comments, docstrings, error messages, tests, or docs.
+
+This applies to explanations too. When behaviour here is constrained by
+something internal, describe the *constraint* and why it exists, not the system
+that imposes it: "the versioned filename must stay literal because
+asset-retention tooling scans issued reports for it" rather than naming the
+scanner, its repo, or its path. A future maintainer needs the invariant; they do
+not need — and outside readers must not get — the internal map.
+
+Public identifiers are fine: `zenable.app` URLs, the published MCP server, the
+plugin's own paths, and third-party names like `echarts` or `mermaid`.
+
 ## Updating the plugin version
 
 The plugin version lives in **two** manifests and both must be changed together:

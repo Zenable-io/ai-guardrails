@@ -169,11 +169,14 @@
   // replace it with the `[[key]]` cross-ref that renumbers itself.
   // build_report.py enforces the same rule as a hard failure at bundle time.
   const LITERAL_DID_RE = /\b(?:F-\d{3}|S-\d{3}|REC-\d{2}|AP-\d+)\b/g;
-  function warnLiteralDisplayIds() {
+  function findLiteralDisplayIds(data) {
     // `_did` is injected above, so drop it — otherwise every finding reports
     // itself. Authored data is what we are auditing.
-    const authored = JSON.stringify(R, (k, v) => (k === "_did" ? undefined : v));
-    const hits = Array.from(new Set(authored.match(LITERAL_DID_RE) || []));
+    const authored = JSON.stringify(data, (k, v) => (k === "_did" ? undefined : v));
+    return Array.from(new Set(String(authored).match(LITERAL_DID_RE) || []));
+  }
+  function warnLiteralDisplayIds() {
+    const hits = findLiteralDisplayIds(R);
     if (!hits.length) return;
     console.warn(
       "[zenable-assessment] hardcoded display ids in authored data: " +
@@ -288,7 +291,9 @@
     if (!cells.length) return null;
     const aligns = [];
     for (const cell of cells) {
-      const m = cell.match(/^(:?)-{2,}(:?)$/);
+      // GFM allows one or more dashes, so `:-:` is a legal centre marker — an
+      // over-strict `-{2,}` silently demoted the whole table back to prose.
+      const m = cell.match(/^(:?)-+(:?)$/);
       if (!m) return null;
       aligns.push(
         m[1] && m[2] ? "center" : m[2] ? "right" : m[1] ? "left" : "",
@@ -2746,18 +2751,30 @@
   // would wedge the entire report before any inline script runs. Dynamic
   // loading keeps hydration independent of chart delivery: boot waits at most
   // CHART_LIB_WAIT_MS, renders chart-less if needed, and fills the charts in
-  // when a slow library finally lands. The version + SRI pins must match the
-  // copies the Zenable app serves under /report-assets/ — bump them together.
+  // when a slow library finally lands.
+  //
+  // The version + SRI pins here are a MIRROR of what the hosting app serves at
+  // these immutable, versioned URLs; that side owns the pin. Bump it there
+  // first, then mirror the version + integrity into this list. A mismatch means
+  // the browser blocks the script on SRI and the hosted report silently loses
+  // its charts.
+  //
+  // `path` is deliberately one whole literal string rather than assembled from
+  // a filename at the point of use. Asset-retention tooling decides which
+  // versions are still needed by scanning already-issued report.html files for
+  // this exact `report-assets/<name>-<semver>.min.js` shape; a version it
+  // cannot see there looks unreferenced and becomes eligible for removal, which
+  // would 404 the pinned URL those issued reports depend on. Keep it literal.
   const CHART_LIBS = [
     {
       global: "echarts",
-      file: "echarts-5.6.1.min.js",
+      path: "report-assets/echarts-5.6.1.min.js",
       integrity:
         "sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss",
     },
     {
       global: "mermaid",
-      file: "mermaid-11.15.0.min.js",
+      path: "report-assets/mermaid-11.15.0.min.js",
       integrity:
         "sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF",
     },
@@ -2806,16 +2823,13 @@
     // prints two CORS errors per library into the console of the very local
     // review this path exists to support.
     if (isFile) {
-      await loadScript(`report-assets/${lib.file}`, null);
+      await loadScript(lib.path, null);
     } else {
-      await loadScript(`/report-assets/${lib.file}`, lib.integrity);
+      await loadScript(`/${lib.path}`, lib.integrity);
     }
     if (window[lib.global]) return true;
     const sub = (window.__ZENABLE_SUBDOMAIN__ || "").trim() || "www";
-    await loadScript(
-      `https://${sub}.zenable.app/report-assets/${lib.file}`,
-      lib.integrity,
-    );
+    await loadScript(`https://${sub}.zenable.app/${lib.path}`, lib.integrity);
     return Boolean(window[lib.global]);
   }
 
@@ -2906,6 +2920,39 @@
         e.matches ? onBeforePrint() : onAfterPrint(),
       );
     }
+  }
+
+  // Test seam. The harness defines window.__ZENABLE_TEST_HOOK__ *before*
+  // loading app.js and receives the real internals; a published report never
+  // defines it, so this is inert in every browser that opens one. Exporting the
+  // functions rather than reimplementing them in the test is the whole point —
+  // a test that re-derives the markdown pipeline proves nothing about the
+  // pipeline the report actually runs.
+  if (typeof window.__ZENABLE_TEST_HOOK__ === "function") {
+    window.__ZENABLE_TEST_HOOK__({
+      renderInline,
+      renderProse,
+      splitTableRow,
+      tableAlignments,
+      escapeHtml,
+      cleanDownloadPath,
+      normalizeFindingSeverity,
+      likelihoodScoreOf,
+      impactScoreOf,
+      bucketOf,
+      zoneOf,
+      severityFromCvss,
+      didForKey,
+      refTitle,
+      findLiteralDisplayIds,
+      loadChartLib,
+      ensureChartLibs,
+      CHART_LIBS,
+      FINDINGS_ORDERED,
+      STRENGTHS_ORDERED,
+      RECS_ORDERED,
+      ATTACKS_ORDERED,
+    });
   }
 
   if (document.readyState === "loading") {

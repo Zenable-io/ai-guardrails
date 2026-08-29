@@ -17,8 +17,10 @@ their bytes against the SAME sha384 pins `app.js` uses, and writes them to
 is on `file://`, so a hosted report is unaffected and the pin is still enforced
 — just here, at vendor time, instead of in the browser at load time.
 
-The pins are parsed out of `app.js` rather than restated, so there is exactly
-one place to bump a chart library version.
+The pins are parsed out of `app.js` rather than restated here, so this repo has
+exactly one place to bump. `app.js` is itself a mirror of what the hosting app
+serves at these versioned URLs; that side owns the pin, so bump it there first
+and mirror the version + integrity into `CHART_LIBS`.
 
 `build_report.py` emits only `report.html` from the report directory, so the
 vendored copies are never packaged into the deliverable bundle.
@@ -42,11 +44,15 @@ from pathlib import Path
 
 CHART_LIBS_RE = re.compile(
     r"""\{\s*global:\s*["'](?P<global>[^"']+)["']\s*,\s*"""
-    r"""file:\s*["'](?P<file>[^"']+)["']\s*,\s*"""
+    r"""path:\s*["'](?P<path>[^"']+)["']\s*,\s*"""
     r"""integrity:\s*(?P<integrity>(?:\s*["'][^"']*["']\s*\+?)+)""",
     re.VERBOSE,
 )
 _STRING_RE = re.compile(r"""["']([^"']*)["']""")
+# The versioned layout that asset-retention tooling scans already-issued
+# reports for. Enforced here so a hand-edited pin cannot take a shape that makes
+# an issued report's asset version look unreferenced and eligible for removal.
+ASSET_PATH_RE = re.compile(r"^report-assets/[A-Za-z0-9_]+-\d+\.\d+\.\d+\.min\.js$")
 TIMEOUT_SECONDS = 60
 
 
@@ -66,7 +72,7 @@ def parse_chart_libs(app_js_text: str) -> list[dict[str, str]]:
     libs = [
         {
             "global": match.group("global"),
-            "file": match.group("file"),
+            "path": match.group("path"),
             # app.js wraps long sha384 pins across lines as concatenated
             # string literals; rejoin them before comparing.
             "integrity": "".join(_STRING_RE.findall(match.group("integrity"))),
@@ -75,6 +81,14 @@ def parse_chart_libs(app_js_text: str) -> list[dict[str, str]]:
     ]
     if not libs:
         raise ChartLibError("app.js CHART_LIBS is empty or unparseable")
+    for lib in libs:
+        if not ASSET_PATH_RE.match(lib["path"]):
+            raise ChartLibError(
+                f"CHART_LIBS path {lib['path']!r} does not match the required "
+                "report-assets/<name>-<semver>.min.js layout; an issued report "
+                "using it would look unreferenced and its pinned version could "
+                "be removed from the host"
+            )
     return libs
 
 
@@ -106,16 +120,23 @@ def vendor_chart_libs(
     target.mkdir(parents=True, exist_ok=True)
 
     results: list[dict[str, object]] = []
-    base = f"https://{subdomain.strip() or 'www'}.zenable.app/report-assets"
+    origin = f"https://{subdomain.strip() or 'www'}.zenable.app"
     for lib in libs:
-        dest = target / lib["file"]
+        name = lib["path"].rsplit("/", 1)[-1]
+        dest = target / name
         pin = lib["integrity"]
         if dest.is_file() and sri_digest(dest.read_bytes(), pin) == pin:
             results.append(
-                {"file": lib["file"], "bytes": dest.stat().st_size, "status": "cached"}
+                {"file": name, "bytes": dest.stat().st_size, "status": "cached"}
             )
             continue
-        url = f"{base}/{lib['file']}"
+        # Prefer the Zenable origin over the upstream CDN. Fetching the bytes
+        # the hosted report will actually load and checking them against the
+        # pin in app.js proves the producer and the server agree — the exact
+        # mismatch that makes a hosted report drop its charts on SRI. A pin
+        # bumped here but not yet deployed fails loudly rather than letting
+        # local review pass against an asset production cannot serve.
+        url = f"{origin}/{lib['path']}"
         payload = fetch(url)
         actual = sri_digest(payload, pin)
         if actual != pin:
@@ -126,12 +147,13 @@ def vendor_chart_libs(
             raise ChartLibError(
                 f"integrity mismatch for {url}\n"
                 f"  expected {pin}\n"
-                f"  actual   {actual}"
+                f"  actual   {actual}\n"
+                "The pin in app.js CHART_LIBS disagrees with what the app "
+                "serves. Reconcile the two before shipping — a hosted report "
+                "with this pin loses its charts."
             )
         dest.write_bytes(payload)
-        results.append(
-            {"file": lib["file"], "bytes": len(payload), "status": "downloaded"}
-        )
+        results.append({"file": name, "bytes": len(payload), "status": "downloaded"})
     return results
 
 

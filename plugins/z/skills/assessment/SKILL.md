@@ -507,6 +507,18 @@ middlebox wedge the whole report. **At runtime the hosted copy is always what
 loads** — `app.js` reaches for the root-relative `/report-assets/` path first on
 any http(s) origin.
 
+Two rules govern `CHART_LIBS`, and both bite quietly if broken. The version and
+integrity are a **mirror** of what the app serves at those immutable versioned
+URLs; that side owns the pin, so bump it there first and mirror it here, or the
+browser blocks the script on SRI and every hosted report loses its charts. And
+each `path` must stay one whole literal `report-assets/<name>-<semver>.min.js`
+string rather than being assembled at the point of use: asset-retention tooling
+decides which versions are still needed by scanning already-issued reports for
+exactly that shape, and a version it cannot see there looks unreferenced and
+becomes eligible for removal — which would 404 the pinned URL those reports
+depend on. `fetch_chart_libs.py` enforces the path shape and fails loudly if the
+pin disagrees with what the app serves.
+
 ### Vendor the chart libraries for local review
 
 Before opening `report/index.html` locally, run:

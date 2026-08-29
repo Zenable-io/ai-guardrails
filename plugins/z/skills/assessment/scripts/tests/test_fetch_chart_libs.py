@@ -16,12 +16,12 @@ def _pin(payload: bytes) -> str:
     return "sha384-" + base64.b64encode(hashlib.sha384(payload).digest()).decode()
 
 
-def _app_js(payload: bytes, *, file: str = "echarts-5.6.1.min.js") -> str:
+def _app_js(payload: bytes, *, path: str = "report-assets/echarts-5.6.1.min.js") -> str:
     return f"""
   const CHART_LIBS = [
     {{
       global: "echarts",
-      file: "{file}",
+      path: "{path}",
       integrity:
         "{_pin(payload)}",
     }},
@@ -39,7 +39,7 @@ def test_parses_the_real_template_pins():
     globals_ = {lib["global"] for lib in libs}
     assert globals_ == {"echarts", "mermaid"}
     for lib in libs:
-        assert lib["file"].endswith(".min.js")
+        assert fetch_chart_libs.ASSET_PATH_RE.match(lib["path"])
         # A pin split across source lines must be rejoined, not truncated.
         assert lib["integrity"].startswith("sha384-")
         assert len(base64.b64decode(lib["integrity"].split("-", 1)[1])) == 48
@@ -98,9 +98,7 @@ def test_pulls_from_the_requested_environment(tmp_path, monkeypatch):
 
     monkeypatch.setattr(fetch_chart_libs, "fetch", _record)
     fetch_chart_libs.vendor_chart_libs(report_dir=report_dir, subdomain="staging")
-    assert seen == [
-        "https://staging.zenable.app/report-assets/echarts-5.6.1.min.js"
-    ]
+    assert seen == ["https://staging.zenable.app/report-assets/echarts-5.6.1.min.js"]
 
 
 @pytest.mark.unit
