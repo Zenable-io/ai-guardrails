@@ -59,22 +59,19 @@ from pathlib import Path
 
 REPO_ROOT: Path = Path.cwd()
 
-_GIT_BIN = Path(shutil.which("git") or "")
-if not _GIT_BIN.is_absolute():
-    raise RuntimeError("git executable not found on PATH")
 
-
-def _git(*args: str, binary: bool = False) -> subprocess.CompletedProcess:
+def _run_git(*, args: list[str], cwd: Path, binary: bool = False) -> str | bytes:
+    # git needs the inherited PATH for its own subcommands, so the env={"PATH": ""}
+    # defense other subprocess calls use is unavailable; resolve and guard instead.
+    found = shutil.which("git")
+    if found is None:
+        raise SystemExit("git was not found on PATH")
+    git = Path(found)
+    if not git.is_absolute():
+        raise SystemExit(f"git resolved to a relative path: {git}")
     return subprocess.run(
-        # Pass the is_absolute()-validated Path directly (no str() wrap) so the
-        # subprocess never resolves `git` through PATH — see the
-        # require-absolute-path-in-subprocess policy.
-        [_GIT_BIN, *args],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-        text=not binary,
-    )
+        [git, *args], cwd=cwd, capture_output=True, text=not binary, check=True
+    ).stdout
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -110,7 +107,7 @@ def _tree_files_commit(
     # `git ls-tree -r` enumerates blobs at the commit; read each via cat-file so
     # the hash is independent of the current working tree.
     spec = commit if path in (".", "") else f"{commit}:{path}"
-    listing = _git("ls-tree", "-r", "--format=%(path)", spec).stdout
+    listing = _run_git(args=["ls-tree", "-r", "--format=%(path)", spec], cwd=REPO_ROOT)
     files: list[tuple[str, bytes]] = []
     prefix = "" if path in (".", "") else path.rstrip("/") + "/"
     for line in listing.splitlines():
@@ -119,8 +116,12 @@ def _tree_files_commit(
             continue
         if _is_excluded(rel_in_subtree, excludes):
             continue
-        blob = _git("cat-file", "-p", f"{commit}:{prefix}{rel_in_subtree}", binary=True)
-        files.append((rel_in_subtree, blob.stdout))
+        blob = _run_git(
+            args=["cat-file", "-p", f"{commit}:{prefix}{rel_in_subtree}"],
+            cwd=REPO_ROOT,
+            binary=True,
+        )
+        files.append((rel_in_subtree, blob))
     return files
 
 
@@ -139,8 +140,12 @@ def _hash_file(path: str, commit: str | None) -> tuple[str, bool]:
     there; otherwise from the working tree (reproducible=False under a commit)."""
     if commit:
         try:
-            blob = _git("cat-file", "-p", f"{commit}:{path}", binary=True)
-            return _sha256_bytes(blob.stdout), True
+            blob = _run_git(
+                args=["cat-file", "-p", f"{commit}:{path}"],
+                cwd=REPO_ROOT,
+                binary=True,
+            )
+            return _sha256_bytes(blob), True
         except subprocess.CalledProcessError:
             pass  # not committed at that revision — fall back to working tree
     fs = REPO_ROOT / path
@@ -266,7 +271,10 @@ def main() -> int:
         return 1
     if args.commit:
         try:
-            _git("rev-parse", "--verify", "--quiet", f"{args.commit}^{{commit}}")
+            _run_git(
+                args=["rev-parse", "--verify", "--quiet", f"{args.commit}^{{commit}}"],
+                cwd=REPO_ROOT,
+            )
         except subprocess.CalledProcessError:
             print(f"ERROR: --commit {args.commit!r} is not a commit", file=sys.stderr)
             return 1

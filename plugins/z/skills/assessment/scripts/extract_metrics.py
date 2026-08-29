@@ -38,20 +38,19 @@ REC = "\x1e"  # ASCII record separator
 # can stay simple closures over a single repo root.
 REPO_ROOT: Path = Path.cwd()
 
-_GIT_BIN = Path(shutil.which("git") or "")
-if not _GIT_BIN.is_absolute():
-    raise RuntimeError("git executable not found on PATH")
 
-
-def git(*args: str) -> str:
-    result = subprocess.run(
-        [_GIT_BIN, *args],
-        cwd=REPO_ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout
+def _run_git(*, args: list[str], cwd: Path) -> str:
+    # git needs the inherited PATH for its own subcommands, so the env={"PATH": ""}
+    # defense other subprocess calls use is unavailable; resolve and guard instead.
+    found = shutil.which("git")
+    if found is None:
+        raise SystemExit("git was not found on PATH")
+    git = Path(found)
+    if not git.is_absolute():
+        raise SystemExit(f"git resolved to a relative path: {git}")
+    return subprocess.run(
+        [git, *args], cwd=cwd, capture_output=True, text=True, check=True
+    ).stdout
 
 
 def collect_commits(cutoff_sha: str | None, path_prefix: str | None) -> list[dict]:
@@ -70,7 +69,7 @@ def collect_commits(cutoff_sha: str | None, path_prefix: str | None) -> list[dic
     log_args = ["log", "--numstat", f"--pretty=format:{fmt}", target]
     if path_prefix:
         log_args += ["--", path_prefix]
-    raw = git(*log_args)
+    raw = _run_git(args=log_args, cwd=REPO_ROOT)
     commits: list[dict] = []
     current: dict | None = None
     for line in raw.splitlines():
@@ -125,17 +124,15 @@ def compute_pr_durations(commits: list[dict]) -> list[dict]:
             continue
         p1, p2 = c["parents"]
         try:
-            base = git("merge-base", p1, p2).strip()
+            base = _run_git(args=["merge-base", p1, p2], cwd=REPO_ROOT).strip()
         except subprocess.CalledProcessError:
             continue
         if not base:
             continue
         try:
-            log = git(
-                "log",
-                "--reverse",
-                "--pretty=format:%at",
-                f"{base}..{p2}",
+            log = _run_git(
+                args=["log", "--reverse", "--pretty=format:%at", f"{base}..{p2}"],
+                cwd=REPO_ROOT,
             )
         except subprocess.CalledProcessError:
             continue
@@ -524,7 +521,15 @@ def main() -> int:
 
     if args.cutoff_sha is not None:
         try:
-            git("rev-parse", "--verify", "--quiet", f"{args.cutoff_sha}^{{commit}}")
+            _run_git(
+                args=[
+                    "rev-parse",
+                    "--verify",
+                    "--quiet",
+                    f"{args.cutoff_sha}^{{commit}}",
+                ],
+                cwd=REPO_ROOT,
+            )
         except subprocess.CalledProcessError:
             print(
                 f"ERROR: --cutoff-sha {args.cutoff_sha!r} is not a commit in {REPO_ROOT}",
