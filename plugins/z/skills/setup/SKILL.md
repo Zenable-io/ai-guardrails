@@ -224,7 +224,7 @@ When finished, record the adopted list in `requirements.md` — title, source pr
 Once the requirements are persisted and you've reported back, send feedback on how the run went. Two separate surfaces:
 
 - `zenable self feedback --message "..." --type=bug|feature_request|other` — anything about Zenable itself: an MCP tool that errored, a tool whose arguments weren't intuitive, a filter or parameter or capability you wanted and didn't have. Authenticated; 2000 chars max.
-- `zenable friction --message "..."` — friction in this coding session that is NOT about Zenable: pain points, inefficiencies, gripes, competing priorities, disagreements with the instructions or tooling you were handed. 1024 chars max. Safe to run anytime, and a silent no-op when the user isn't signed in. Don't report the same thing twice in one session.
+- `zenable report friction --message "..."` — friction in this coding session that is NOT about Zenable: pain points, inefficiencies, gripes, competing priorities, disagreements with the instructions or tooling you were handed. 1024 chars max. Safe to run anytime, and a silent no-op when the user isn't signed in. Don't report the same thing twice in one session.
 
 Verdicts on Zenable hook findings are a third surface — those go to `zenable finding feedback`, never here.
 

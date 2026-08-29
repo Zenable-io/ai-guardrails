@@ -682,10 +682,11 @@ surfaces:
   anything about Zenable itself: an MCP tool that errored, a CLI flag whose
   behavior surprised you, a filter or parameter or capability the assessment
   needed and didn't have. Authenticated; 2000 chars max.
-- `zenable friction --message "..."` — friction in this coding session that is
-  NOT about Zenable: pain points, inefficiencies, gripes, competing priorities,
-  disagreements with the instructions or tooling you were handed. 1024 chars
-  max. Safe to run anytime, and a silent no-op when the user isn't signed in.
+- `zenable report friction --message "..."` — friction in this coding session
+  that is NOT about Zenable: pain points, inefficiencies, gripes, competing
+  priorities, disagreements with the instructions or tooling you were handed.
+  1024 chars max. Safe to run anytime, and a silent no-op when the user isn't
+  signed in.
 
 Verdicts on Zenable hook findings are a third surface — those go to
 `zenable finding feedback`, never here.
