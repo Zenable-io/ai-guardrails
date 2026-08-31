@@ -40,27 +40,6 @@ released version.
 
 If nothing since the last tag warrants a bump, the dispatch is a no-op; the `force`
 input (`patch`/`minor`/`major`) overrides the derived bump when the history
-under-represents the change. The push to main works because the workflow pushes over
-SSH as the ZenableAutomation machine user, which the branch ruleset's bypass list
+under-represents the change. The push to main works because the workflow authenticates
+with a token minted for an internal GitHub App that the branch ruleset's bypass list
 exempts — release commits are the only commits that skip a PR.
-
-<!-- zenable:managed start — managed by `zenable`; `zenable uninstall` removes this block -->
-This IDE has no Zenable MCP server. To work with Zenable requirements, guardrails, scopes, and findings, shell out to the `zenable api` CLI (it reuses your existing `zenable login`):
-
-- To list your requirements: `zenable api requirements list`
-- To list active guardrails: `zenable api guardrails list`
-- To list scope definitions: `zenable api requirements list-scope-definitions`
-- To list authorable scope types and integration values: `zenable api requirements list-scope-definitions-authoring-options`
-- To list detailed findings: `zenable api findings list`
-- To read agent triage feedback on a governance object: `zenable api agent-feedback list`
-- To read human ratings of a requirement: `zenable api requirements list-feedback`
-- To create a new requirement: `zenable api requirements create`
-- To create a scope definition: `zenable api requirements create-scope-definitions`
-- To update a requirement your tenant owns: `zenable api requirements update`
-- To override or publish a marketplace requirement: `zenable api requirements update`
-
-Requirements come in two kinds. Requirements your tenant owns are yours to edit: `zenable api requirements update` changes one in place or publishes a new version of it. Marketplace requirements are published by Zenable and shared across tenants, so they are never edited directly — the same `zenable api requirements update` on a marketplace requirement instead records an override for your tenant (enable/disable it or pin a version), and publishing a new marketplace version requires the marketplace:publish permission.
-
-Run `zenable api <group> <command> --help` for the available flags.
-These have no CLI equivalent — use the Zenable dashboard instead: regenerate a guardrail, reinstate a prior guardrail version, restore a soft-deleted requirement.
-<!-- zenable:managed end -->

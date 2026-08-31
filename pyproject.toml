@@ -75,11 +75,10 @@ patch_tags = ["fix", "perf"]
 [tool.semantic_release.remote]
 name = "origin"
 type = "github"
-# Push over the checkout's SSH remote (authenticated as the automation machine
-# user the branch ruleset exempts); with this false, semantic-release would
-# inject GH_TOKEN into the push URL and the push would be rejected by the
-# ruleset as github-actions[bot].
-ignore_token_for_push = true
+# Pushes use GH_TOKEN, which the Release workflow sets to a token minted for
+# the internal release app the branch ruleset's bypass list exempts (the
+# default GITHUB_TOKEN would be rejected as github-actions[bot]).
+ignore_token_for_push = false
 
 [tool.semantic_release.publish]
 dist_glob_patterns = []

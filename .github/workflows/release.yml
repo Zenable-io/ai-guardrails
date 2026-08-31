@@ -35,15 +35,21 @@ jobs:
     runs-on: ubuntu-24.04
     concurrency: release
     steps:
+      # Pushes to main must authenticate as the internal release app so the main
+      # ruleset's bypass applies; GITHUB_TOKEN authenticates as
+      # github-actions[bot], which the ruleset rejects.
+      - name: Mint a release app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Checkout the repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          # Pushes must authenticate as the ZenableAutomation machine user (this
-          # key lives on that account) so the main ruleset's Automation-team
-          # bypass applies; GITHUB_TOKEN authenticates as github-actions[bot],
-          # which the ruleset would reject.
-          ssh-key: ${{ secrets.RELEASE_SSH_KEY }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -63,8 +69,10 @@ jobs:
       - name: Run the Release
         id: release
         env:
-          # semantic-release reads GH_TOKEN for the commit/tag push and the release API.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # semantic-release reads GH_TOKEN for the commit/tag push and the
+          # release API. This must stay the app token, not GITHUB_TOKEN — see
+          # the checkout step.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           FORCE: ${{ inputs.force || 'auto' }}
         run: |
           git config user.name "Zenable Automation"
@@ -104,7 +112,7 @@ jobs:
           # in pyproject.toml), commits them with the changelog, pushes the commit to
           # main, tags that commit, and cuts the GitHub release — so the released tag
           # always points at a commit whose manifests carry the released version.
-          # The push goes over SSH as ZenableAutomation (see the checkout step).
+          # The push authenticates as the release app (see the checkout step).
           semantic-release -v version --commit --tag --push --vcs-release "${force_args[@]}"
 
           # Only a prerelease carries a `-suffix`.
