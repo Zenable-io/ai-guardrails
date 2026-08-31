@@ -592,7 +592,13 @@ main { max-width: 1480px; margin: 0 auto; padding: 16px 56px 48px; }
 .cve-body dt { padding-top: 2px; }
 
 /* ==================================================== Custom Requirements */
-.tokenization-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* auto-fit, not a fixed `1fr 1fr`: the card count comes from
+   customRequirements.sections, and an engagement with a single requirement
+   would otherwise render that card at half width with dead space beside it.
+   auto-fit collapses the empty track so a lone card fills the row. */
+.tokenization-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 10px;
+}
 .tok-card {
   border: 1px solid var(--z-rule); border-radius: var(--radius-card);
   background: var(--z-paper); padding: 14px;
