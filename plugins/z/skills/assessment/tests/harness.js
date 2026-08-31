@@ -20,6 +20,22 @@ const vm = require("node:vm");
 
 const APP_JS = path.join(__dirname, "..", "assets", "template", "app.js");
 
+// A representative resolved block: exactly the shape fetch_chart_libs.py writes.
+const DEFAULT_CHART_LIBS = {
+  libs: [
+    {
+      global: "echarts",
+      path: "report-assets/echarts-5.6.1.min.js",
+      integrity: "sha384-" + "e".repeat(64),
+    },
+    {
+      global: "mermaid",
+      path: "report-assets/mermaid-11.15.0.min.js",
+      integrity: "sha384-" + "m".repeat(64),
+    },
+  ],
+};
+
 /** A script element stub that records what app.js set on it. */
 function makeScriptStub(onAppend) {
   const node = {
@@ -46,7 +62,13 @@ function makeScriptStub(onAppend) {
  * `env.loads` as `{ url, integrity, crossOrigin }`.
  */
 function loadApp(report, options = {}) {
-  const { protocol = "https:", loadScriptResult = () => ({ ok: false }) } = options;
+  const {
+    protocol = "https:",
+    loadScriptResult = () => ({ ok: false }),
+    // What the resolve step wrote into the chart-libs-data block. The template
+    // ships this as `null`; a real report always has it filled in.
+    chartLibs = DEFAULT_CHART_LIBS,
+  } = options;
 
   const loads = [];
   const warnings = [];
@@ -92,7 +114,10 @@ function loadApp(report, options = {}) {
     body: { classList: { contains: () => false, add: noop, remove: noop } },
     addEventListener: noop,
     removeEventListener: noop,
-    getElementById: nullQuery,
+    getElementById: (id) =>
+      id === "chart-libs-data"
+        ? { textContent: chartLibs === null ? "null" : JSON.stringify(chartLibs) }
+        : null,
     querySelector: nullQuery,
     querySelectorAll: emptyQueryAll,
     createElement(tag) {
@@ -175,4 +200,4 @@ function minimalReport(overrides = {}) {
   };
 }
 
-module.exports = { loadApp, minimalReport, APP_JS };
+module.exports = { loadApp, minimalReport, APP_JS, DEFAULT_CHART_LIBS };

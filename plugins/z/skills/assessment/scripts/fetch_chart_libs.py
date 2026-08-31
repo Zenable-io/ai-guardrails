@@ -2,28 +2,36 @@
 # requires-python = ">=3.11"
 # dependencies = []
 # ///
-"""Vendor the pinned echarts/mermaid bundles next to a report for LOCAL viewing.
+"""Resolve, verify and vendor the chart libraries a report loads.
 
-The hosted report always loads the chart libraries from the Zenable app's
-`/report-assets/`, with the browser enforcing the SRI pins in `app.js`. A report
-opened from `file://` has no origin to resolve that root-relative path against,
-and a `file://` response is opaque so SRI can never be satisfied there — the
-browser blocks the script outright rather than falling back. The result is a
-local review with no risk matrix and no data-flow diagram.
+The report template carries NO version or hash of its own. It cannot know which
+version the Zenable app currently serves, and a hand-copied pin that falls
+behind fails as a browser-blocked script — a report that silently loses its
+charts with nothing logged anywhere the authors would see.
 
-This script closes that gap: it downloads the SAME version-pinned files, checks
-their bytes against the SAME sha384 pins `app.js` uses, and writes them to
-`<report-dir>/report-assets/`. `app.js` reads that directory only when the page
-is on `file://`, so a hosted report is unaffected and the pin is still enforced
-— just here, at vendor time, instead of in the browser at load time.
+So this script asks. It reads the public, unauthenticated version index the app
+publishes, takes the version that app says is current, downloads those bytes,
+checks them against the integrity the index declares, and then does two things:
 
-The pins are parsed out of `app.js` rather than restated here, so this repo has
-exactly one place to bump. `app.js` is itself a mirror of what the hosting app
-serves at these versioned URLs; that side owns the pin, so bump it there first
-and mirror the version + integrity into `CHART_LIBS`.
+1. Writes the resolved version + integrity into the report's `chart-libs-data`
+   block. From that moment the report is pinned: it loads that exact versioned
+   URL with that exact hash for the rest of its life, immutable and
+   SRI-verified, exactly as before. What changed is only where the pin came
+   from, and that it can no longer be stale.
 
-`build_report.py` emits only `report.html` from the report directory, so the
-vendored copies are never packaged into the deliverable bundle.
+2. Vendors the same bytes into `<report-dir>/report-assets/` for LOCAL review.
+   A `file://` page has no origin to resolve the root-relative `/report-assets/`
+   path against, and a `file://` response is opaque so SRI can never be
+   satisfied there — the browser blocks the script outright rather than
+   degrading. Without this, local review silently loses the risk matrix, the
+   data-flow diagram and every repository-history chart, which is the part of
+   the walkthrough that most needs eyes on it.
+
+`app.js` reads the vendored copy only when the page is on `file://`, so a hosted
+report is unaffected, and `build_report.py` emits only `report.html` from the
+report directory, so the vendored copies never reach the deliverable.
+
+No credentials are needed: both the index and the assets are public.
 
 Usage:
     uv run --script fetch_chart_libs.py --report-dir <workspace>/report
@@ -36,64 +44,31 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import json
 import re
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-CHART_LIBS_RE = re.compile(
-    r"""\{\s*global:\s*["'](?P<global>[^"']+)["']\s*,\s*"""
-    r"""path:\s*["'](?P<path>[^"']+)["']\s*,\s*"""
-    r"""integrity:\s*(?P<integrity>(?:\s*["'][^"']*["']\s*\+?)+)""",
-    re.VERBOSE,
-)
-_STRING_RE = re.compile(r"""["']([^"']*)["']""")
-# The versioned layout that asset-retention tooling scans already-issued
-# reports for. Enforced here so a hand-edited pin cannot take a shape that makes
-# an issued report's asset version look unreferenced and eligible for removal.
+# The versioned layout the app serves and that asset-retention tooling scans
+# already-issued reports for. Enforced on whatever the index hands us so a
+# malformed entry cannot produce a report whose asset version looks
+# unreferenced and becomes eligible for removal.
 ASSET_PATH_RE = re.compile(r"^report-assets/[A-Za-z0-9_]+-\d+\.\d+\.\d+\.min\.js$")
+VERSIONS_DOC = "report-asset-versions.json"
+# The globals app.js waits for. An asset the index offers that the report has no
+# use for is ignored rather than downloaded.
+WANTED = ("echarts", "mermaid")
 TIMEOUT_SECONDS = 60
 
 
 class ChartLibError(RuntimeError):
-    """A pinned chart library could not be vendored."""
-
-
-def parse_chart_libs(app_js_text: str) -> list[dict[str, str]]:
-    """Read the CHART_LIBS pins straight out of app.js."""
-    start = app_js_text.find("const CHART_LIBS")
-    if start == -1:
-        raise ChartLibError("app.js does not declare CHART_LIBS")
-    end = app_js_text.find("];", start)
-    if end == -1:
-        raise ChartLibError("app.js CHART_LIBS declaration is unterminated")
-    block = app_js_text[start:end]
-    libs = [
-        {
-            "global": match.group("global"),
-            "path": match.group("path"),
-            # app.js wraps long sha384 pins across lines as concatenated
-            # string literals; rejoin them before comparing.
-            "integrity": "".join(_STRING_RE.findall(match.group("integrity"))),
-        }
-        for match in CHART_LIBS_RE.finditer(block)
-    ]
-    if not libs:
-        raise ChartLibError("app.js CHART_LIBS is empty or unparseable")
-    for lib in libs:
-        if not ASSET_PATH_RE.match(lib["path"]):
-            raise ChartLibError(
-                f"CHART_LIBS path {lib['path']!r} does not match the required "
-                "report-assets/<name>-<semver>.min.js layout; an issued report "
-                "using it would look unreferenced and its pinned version could "
-                "be removed from the host"
-            )
-    return libs
+    """The chart libraries could not be resolved or vendored."""
 
 
 def sri_digest(data: bytes, integrity: str) -> str:
-    """Compute `data`'s digest in the same algorithm `integrity` declares."""
+    """Compute `data`'s digest in the algorithm `integrity` declares."""
     algo, _, _ = integrity.partition("-")
     if algo not in {"sha256", "sha384", "sha512"}:
         raise ChartLibError(f"unsupported SRI algorithm: {integrity!r}")
@@ -106,21 +81,83 @@ def fetch(url: str) -> bytes:
         with urllib.request.urlopen(url, timeout=TIMEOUT_SECONDS) as response:
             return response.read()
     except urllib.error.URLError as error:
-        raise ChartLibError(f"download failed: {url} ({error})") from error
+        hint = ""
+        if url.endswith(VERSIONS_DOC):
+            # By far the likeliest cause, and not obvious from a bare 403/404:
+            # the environment has not deployed a build that publishes the index.
+            hint = (
+                f"\nThe version index is missing from this environment. It is "
+                f"published by the app, so an environment that has not yet "
+                f"deployed a build containing it cannot serve it. Check "
+                f"--subdomain (currently resolving {url}), or use an "
+                f"environment that has it."
+            )
+        raise ChartLibError(f"download failed: {url} ({error}){hint}") from error
+
+
+def resolve_libs(index: dict) -> list[dict[str, str]]:
+    """Pick the current version of each wanted asset out of the published index.
+
+    Everything the report will pin comes from here, so each entry is validated
+    rather than trusted: a missing hash or an off-layout path becomes an error
+    now, at authoring time, instead of a blocked script in a reader's browser.
+    """
+    assets = index.get("assets") or {}
+    libs = []
+    for name in WANTED:
+        asset = assets.get(name)
+        if not asset:
+            raise ChartLibError(
+                f"the app's {VERSIONS_DOC} does not offer {name!r}; the report "
+                f"cannot render without it"
+            )
+        current = asset.get("current")
+        entry = (asset.get("versions") or {}).get(current)
+        if not current or not entry:
+            raise ChartLibError(f"{name}: index names no usable current version")
+        path, integrity = entry.get("path"), entry.get("integrity")
+        if not integrity:
+            raise ChartLibError(f"{name} {current}: index declares no integrity")
+        if not ASSET_PATH_RE.match(path or ""):
+            raise ChartLibError(
+                f"{name} {current}: index path {path!r} is not the expected "
+                f"report-assets/<name>-<semver>.min.js layout"
+            )
+        libs.append(
+            {"global": name, "version": current, "path": path, "integrity": integrity}
+        )
+    return libs
+
+
+def inline_into_html(html_path: Path, libs: list[dict]) -> None:
+    """Pin the resolved libraries into the report's chart-libs-data block."""
+    if not html_path.is_file():
+        raise ChartLibError(f"missing {html_path}")
+    payload = {"libs": [{k: lib[k] for k in ("global", "path", "integrity")} for lib in libs]}
+    inlined = json.dumps(payload, separators=(",", ":")).replace("<", "\\u003c")
+    patched, count = re.subn(
+        r"<!--\s*CHARTLIBS-BEGIN\s*-->.*?<!--\s*CHARTLIBS-END\s*-->",
+        lambda _m: f"<!-- CHARTLIBS-BEGIN -->{inlined}<!-- CHARTLIBS-END -->",
+        html_path.read_text(encoding="utf-8"),
+        count=1,
+        flags=re.DOTALL,
+    )
+    if not count:
+        raise ChartLibError(f"CHARTLIBS markers not found in {html_path}")
+    html_path.write_text(patched, encoding="utf-8")
 
 
 def vendor_chart_libs(
     *, report_dir: Path, subdomain: str = "www", out_dir: Path | None = None
 ) -> list[dict[str, object]]:
-    app_js = report_dir / "app.js"
-    if not app_js.is_file():
-        raise ChartLibError(f"missing {app_js}")
-    libs = parse_chart_libs(app_js.read_text(encoding="utf-8"))
+    origin = f"https://{subdomain.strip() or 'www'}.zenable.app"
+    index = json.loads(fetch(f"{origin}/{VERSIONS_DOC}").decode("utf-8"))
+    libs = resolve_libs(index)
+
     target = out_dir or (report_dir / "report-assets")
     target.mkdir(parents=True, exist_ok=True)
 
     results: list[dict[str, object]] = []
-    origin = f"https://{subdomain.strip() or 'www'}.zenable.app"
     for lib in libs:
         name = lib["path"].rsplit("/", 1)[-1]
         dest = target / name
@@ -130,30 +167,23 @@ def vendor_chart_libs(
                 {"file": name, "bytes": dest.stat().st_size, "status": "cached"}
             )
             continue
-        # Prefer the Zenable origin over the upstream CDN. Fetching the bytes
-        # the hosted report will actually load and checking them against the
-        # pin in app.js proves the producer and the server agree — the exact
-        # mismatch that makes a hosted report drop its charts on SRI. A pin
-        # bumped here but not yet deployed fails loudly rather than letting
-        # local review pass against an asset production cannot serve.
         url = f"{origin}/{lib['path']}"
         payload = fetch(url)
         actual = sri_digest(payload, pin)
         if actual != pin:
-            # Refuse to write a mismatched bundle. The whole point of vendoring
-            # is that the local copy is byte-identical to what the hosted report
-            # serves; a near-enough build would make local review a different
-            # test from the deliverable.
+            # The index and the bytes it points at disagree — the app is serving
+            # something other than what it advertises. Vendoring anyway would
+            # make local review pass against bytes the reader's browser will
+            # block on SRI.
             raise ChartLibError(
                 f"integrity mismatch for {url}\n"
-                f"  expected {pin}\n"
-                f"  actual   {actual}\n"
-                "The pin in app.js CHART_LIBS disagrees with what the app "
-                "serves. Reconcile the two before shipping — a hosted report "
-                "with this pin loses its charts."
+                f"  index declares {pin}\n"
+                f"  actual         {actual}"
             )
         dest.write_bytes(payload)
         results.append({"file": name, "bytes": len(payload), "status": "downloaded"})
+
+    inline_into_html(report_dir / "index.html", libs)
     return results
 
 
@@ -163,17 +193,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--report-dir",
         required=True,
         type=Path,
-        help="The report workspace directory holding app.js.",
+        help="the report workspace directory holding index.html",
     )
     parser.add_argument(
         "--subdomain",
         default="www",
-        help="Zenable environment to pull the pinned assets from (default: www).",
+        help="Zenable environment to resolve and download from (default: www)",
     )
     parser.add_argument(
         "--out-dir",
         type=Path,
-        help="Override the destination (default: <report-dir>/report-assets).",
+        help="override the vendor destination (default: <report-dir>/report-assets)",
     )
     return parser.parse_args(argv)
 
@@ -190,10 +220,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 1
     target = args.out_dir or (args.report_dir / "report-assets")
-    print(f"Vendored chart libraries into {target}")
+    print(f"Pinned chart libraries into {args.report_dir / 'index.html'}")
+    print(f"Vendored copies for local review in {target}")
     for result in results:
         print(f"  {result['file']:<28} {result['bytes']:>10,} bytes  {result['status']}")
-    print("These are for LOCAL viewing only and are not packaged into the bundle.")
+    print("The vendored copies are local-only and are not packaged into the bundle.")
     return 0
 
 

@@ -2753,32 +2753,22 @@
   // CHART_LIB_WAIT_MS, renders chart-less if needed, and fills the charts in
   // when a slow library finally lands.
   //
-  // The version + SRI pins here are a MIRROR of what the hosting app serves at
-  // these immutable, versioned URLs; that side owns the pin. Bump it there
-  // first, then mirror the version + integrity into this list. A mismatch means
-  // the browser blocks the script on SRI and the hosted report silently loses
-  // its charts.
+  // This template carries NO version or hash of its own. It cannot know which
+  // version the app currently serves, and a hand-copied pin that falls behind
+  // fails as a browser-blocked script — a report that silently loses its charts
+  // with nothing logged anywhere the authors would see. Instead
+  // scripts/fetch_chart_libs.py resolves the version and integrity from the
+  // index the app publishes and writes them into the `chart-libs-data` block
+  // below. From that moment the values are fixed in this report, so it stays
+  // immutable and SRI-verified for its whole life.
   //
-  // `path` is deliberately one whole literal string rather than assembled from
-  // a filename at the point of use. Asset-retention tooling decides which
+  // Each `path` is one whole literal string in that block rather than assembled
+  // from a filename at the point of use. Asset-retention tooling decides which
   // versions are still needed by scanning already-issued report.html files for
   // this exact `report-assets/<name>-<semver>.min.js` shape; a version it
   // cannot see there looks unreferenced and becomes eligible for removal, which
   // would 404 the pinned URL those issued reports depend on. Keep it literal.
-  const CHART_LIBS = [
-    {
-      global: "echarts",
-      path: "report-assets/echarts-5.6.1.min.js",
-      integrity:
-        "sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss",
-    },
-    {
-      global: "mermaid",
-      path: "report-assets/mermaid-11.15.0.min.js",
-      integrity:
-        "sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF",
-    },
-  ];
+  const CHART_LIBS = (loadInlineJson("chart-libs-data") || {}).libs || [];
   const CHART_LIB_WAIT_MS = 8000;
 
   // A `file://` page cannot satisfy Subresource Integrity: the response is

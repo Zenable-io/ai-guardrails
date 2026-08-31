@@ -1,4 +1,5 @@
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -19,6 +20,9 @@ def _write_report(report_dir: Path, *, extra_resource: str = "") -> None:
 </head>
 <body>
   <main>Report</main>
+  <script id="chart-libs-data" type="application/json">
+<!-- CHARTLIBS-BEGIN -->{{"libs":[{{"global":"echarts","path":"report-assets/echarts-5.6.1.min.js","integrity":"sha384-x"}}]}}<!-- CHARTLIBS-END -->
+  </script>
   {extra_resource}
   <script src="data.js"></script>
   <script src="app.js"></script>
@@ -249,3 +253,43 @@ def test_build_report_allows_key_cross_refs(tmp_path):
         encoding="utf-8",
     )
     build_report.validate_display_ids(data_js.read_text(encoding="utf-8"))
+
+
+@pytest.mark.unit
+def test_build_report_refuses_unresolved_chart_libs(tmp_path):
+    # A report whose chart libraries were never resolved ships with no risk
+    # matrix, no diagram and no history charts — broken, not degraded, and
+    # invisible until a reader opens it.
+    report_dir = tmp_path / "report"
+    _write_report(report_dir)
+    index = report_dir / "index.html"
+    index.write_text(
+        re.sub(
+            r"<!-- CHARTLIBS-BEGIN -->.*?<!-- CHARTLIBS-END -->",
+            "<!-- CHARTLIBS-BEGIN -->null<!-- CHARTLIBS-END -->",
+            index.read_text(encoding="utf-8"),
+            flags=re.DOTALL,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="fetch_chart_libs"):
+        build_report.build_report_html(report_dir)
+
+
+@pytest.mark.unit
+def test_build_report_refuses_a_chart_lib_without_integrity(tmp_path):
+    report_dir = tmp_path / "report"
+    _write_report(report_dir)
+    index = report_dir / "index.html"
+    index.write_text(
+        re.sub(
+            r"<!-- CHARTLIBS-BEGIN -->.*?<!-- CHARTLIBS-END -->",
+            '<!-- CHARTLIBS-BEGIN -->{"libs":[{"global":"echarts",'
+            '"path":"report-assets/echarts-5.6.1.min.js"}]}<!-- CHARTLIBS-END -->',
+            index.read_text(encoding="utf-8"),
+            flags=re.DOTALL,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="missing path/integrity"):
+        build_report.build_report_html(report_dir)

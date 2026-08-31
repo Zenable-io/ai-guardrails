@@ -219,6 +219,37 @@ def validate_display_ids(data_js_text: str) -> None:
     )
 
 
+# The chart libraries are the only remote resource a report loads, and the
+# report can no longer name a version by itself — fetch_chart_libs.py resolves
+# one from the app and writes it into this block. An unresolved block means the
+# deliverable would ship with no risk matrix, no data-flow diagram and no
+# repository-history charts. That is a broken report, not a degraded one, and it
+# is invisible until a reader opens it, so refuse to build.
+_CHART_LIBS_BLOCK_RE = re.compile(
+    r"<!--\s*CHARTLIBS-BEGIN\s*-->(.*?)<!--\s*CHARTLIBS-END\s*-->", re.DOTALL
+)
+
+
+def validate_chart_libs(html: str) -> None:
+    match = _CHART_LIBS_BLOCK_RE.search(html)
+    if not match:
+        raise RuntimeError(
+            "index.html has no CHARTLIBS block; the report template is missing "
+            "the chart-libs-data script tag"
+        )
+    raw = match.group(1).strip()
+    libs = (json.loads(raw) or {}).get("libs") if raw and raw != "null" else None
+    if not libs:
+        raise RuntimeError(
+            "chart libraries are not resolved: run scripts/fetch_chart_libs.py "
+            "--report-dir <workspace>/report before building. Without it the "
+            "report ships with no charts and no diagram."
+        )
+    for lib in libs:
+        if not lib.get("integrity") or not lib.get("path"):
+            raise RuntimeError(f"chart library entry is missing path/integrity: {lib!r}")
+
+
 def _script_safe(js: str) -> str:
     return re.sub(r"</(script)", r"<\/\1", js, flags=re.IGNORECASE)
 
@@ -263,6 +294,7 @@ def build_report_html(report_dir: Path, asset_subdomain: str = "") -> str:
             raise RuntimeError(f"missing required report input: {required}")
 
     html = index_html.read_text(encoding="utf-8")
+    validate_chart_libs(html)
     html = re.sub(
         r"[ \t]*<link\b[^>]*href=[\"']https?://[^\"']+[\"'][^>]*>\s*\n?",
         "",

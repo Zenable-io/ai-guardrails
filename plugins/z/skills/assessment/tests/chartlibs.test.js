@@ -13,7 +13,7 @@ const { loadApp, minimalReport } = require("./harness");
 
 const ASSET_PATH_RE = /^report-assets\/[A-Za-z0-9_]+-\d+\.\d+\.\d+\.min\.js$/;
 
-test("every pinned lib declares a sha384 SRI and a versioned path", () => {
+test("a resolved report exposes a sha384 SRI and a versioned path per lib", () => {
   const { api } = loadApp(minimalReport());
   const libs = Array.from(api.CHART_LIBS);
   assert.ok(libs.length >= 2);
@@ -23,20 +23,42 @@ test("every pinned lib declares a sha384 SRI and a versioned path", () => {
   }
 });
 
-test("the versioned path is one literal string, not assembled at use", () => {
-  // Retention tooling decides which asset versions are still needed by scanning
-  // issued report.html files for this exact shape. If the URL were built from a
-  // bare filename the scan would find nothing, the version would look
-  // unreferenced, and removing it would 404 every report already pinned to it.
+test("the template carries no pin of its own", () => {
+  // The producer cannot know which version the app serves, and a hand-copied
+  // hash that falls behind fails as a browser-blocked script. The version and
+  // integrity are resolved at build time and written into chart-libs-data.
   const source = require("node:fs").readFileSync(require("./harness").APP_JS, "utf8");
-  const { api } = loadApp(minimalReport());
-  for (const lib of Array.from(api.CHART_LIBS)) {
-    assert.ok(
-      source.includes(`"${lib.path}"`),
-      `${lib.global}: ${lib.path} must appear verbatim in app.js`,
-    );
-    assert.match(lib.path, ASSET_PATH_RE);
-  }
+  assert.ok(!source.includes("sha384-"), "app.js must not carry an SRI pin");
+  assert.ok(!/echarts-\d/.test(source), "app.js must not name an asset version");
+});
+
+test("an unresolved report degrades instead of throwing", () => {
+  // chart-libs-data ships as null; build_report.py refuses to bundle in that
+  // state, but a half-built workspace opened locally must still hydrate.
+  const { api } = loadApp(minimalReport(), { chartLibs: null });
+  assert.deepEqual(Array.from(api.CHART_LIBS), []);
+});
+
+test("the resolved path is used verbatim, never reassembled", () => {
+  // Retention tooling finds a report's version by matching this exact shape in
+  // the emitted HTML. If the loader rebuilt the URL from a bare filename the
+  // string would not be there, the version would look unreferenced, and
+  // removing it would 404 every report already pinned to it.
+  const chartLibs = {
+    libs: [
+      {
+        global: "echarts",
+        path: "report-assets/echarts-9.9.9.min.js",
+        integrity: "sha384-zzz",
+      },
+    ],
+  };
+  const { api, loads } = loadApp(minimalReport(), { chartLibs });
+  const lib = Array.from(api.CHART_LIBS)[0];
+  assert.match(lib.path, ASSET_PATH_RE);
+  return api.loadChartLib(lib).then(() => {
+    assert.equal(loads[0].url, "/report-assets/echarts-9.9.9.min.js");
+  });
 });
 
 test("a hosted report loads same-origin with SRI enforced", async () => {

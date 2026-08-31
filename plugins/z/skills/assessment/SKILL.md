@@ -507,39 +507,39 @@ middlebox wedge the whole report. **At runtime the hosted copy is always what
 loads** — `app.js` reaches for the root-relative `/report-assets/` path first on
 any http(s) origin.
 
-Two rules govern `CHART_LIBS`, and both bite quietly if broken. The version and
-integrity are a **mirror** of what the app serves at those immutable versioned
-URLs; that side owns the pin, so bump it there first and mirror it here, or the
-browser blocks the script on SRI and every hosted report loses its charts. And
-each `path` must stay one whole literal `report-assets/<name>-<semver>.min.js`
-string rather than being assembled at the point of use: asset-retention tooling
-decides which versions are still needed by scanning already-issued reports for
-exactly that shape, and a version it cannot see there looks unreferenced and
-becomes eligible for removal — which would 404 the pinned URL those reports
-depend on. `fetch_chart_libs.py` enforces the path shape and fails loudly if the
-pin disagrees with what the app serves.
+The report template carries **no version or hash of its own**. It cannot know
+which version the app serves, and a hand-copied pin that falls behind fails as a
+browser-blocked script — a report that silently loses its charts. Instead
+`fetch_chart_libs.py` resolves the current version and its integrity from the
+index the app publishes and writes them into the report's `chart-libs-data`
+block. From then on that report is pinned: same versioned URL, same hash, for
+its whole life. `build_report.py` refuses to bundle a report where that step has
+not run, because the deliverable would ship with no charts and no diagram.
 
-### Vendor the chart libraries for local review
+### Resolve and vendor the chart libraries
 
-Before opening `report/index.html` locally, run:
+Required, before opening the report and before building:
 
 ```bash
 uv run --script <skill-path>/scripts/fetch_chart_libs.py \
   --report-dir <workspace>/report
 ```
 
-A `file://` page cannot resolve the root-relative `/report-assets/` path, and a
-`file://` response is opaque so the browser can never verify the SRI pin — it
-blocks the script outright rather than degrading. Without this step local review
-silently loses the risk matrix, the data-flow diagram, and every Appendix C
-chart, which is exactly the part of the walkthrough that needs eyes on it.
+This does two things. It pins the report to the version the app currently serves
+(see above), and it vendors those same bytes into
+`<workspace>/report/report-assets/` for local review. Both come from public,
+unauthenticated URLs — no credentials, no prod access.
 
-The script downloads the SAME pinned files, verifies their bytes against the SAME
-sha384 pins in `app.js`, and writes them to `<workspace>/report/report-assets/`.
-`app.js` reads that directory only when the page is on `file://`, so a hosted
-report is unaffected, and `build_report.py` emits only `report.html` from the
-report directory, so the vendored copies never reach the bundle. Pass
-`--subdomain <env>` to pull from a non-production environment.
+The local copy matters because a `file://` page cannot resolve the root-relative
+`/report-assets/` path, and a `file://` response is opaque so the browser can
+never verify the SRI pin — it blocks the script outright rather than degrading.
+Without this the walkthrough silently loses the risk matrix, the data-flow
+diagram, and every Appendix C chart.
+
+`app.js` reads the vendored copy only on `file://`, so a hosted report is
+unaffected, and `build_report.py` emits only `report.html` from the report
+directory, so the copies never reach the bundle. Pass `--subdomain <env>` to
+resolve against a non-production environment.
 
 ### Build the bundle
 
@@ -767,19 +767,18 @@ right; that sign-off is the real exit criterion for the engagement.
   and preserves the root-relative `/report-assets/` chart-library references.
   Refuses to build if `data.js` hardcodes a derived display id (`F-004`,
   `REC-01`, …) instead of a `[[key]]` cross-ref.
-- `scripts/fetch_chart_libs.py` — vendors the SRI-pinned echarts/mermaid bundles
-  into `<workspace>/report/report-assets/` so the report renders its charts when
-  opened from `file://`. Pins are parsed out of `app.js`, so a version bump is a
-  one-place change. Local review only; never packaged into the bundle.
+- `scripts/fetch_chart_libs.py` — resolves the chart-library version + integrity
+  from the index the app publishes, pins them into the report, and vendors the
+  same bytes for `file://` review. Required before building. The template holds
+  no pin of its own, so a version bump on the platform needs no change here.
 - Every transform takes `--out <evidence/x.json>` and an optional
   `--html <report/index.html>` to inline at build time between its
   `<!-- *-BEGIN/END -->` markers. Tests live in `scripts/tests/`
   (`uv run --with pytest pytest scripts/tests/`).
 - `assets/template/` — the report template (`index.html`, `app.js`, `styles.css`,
   `data.js`). Copy it to `<workspace>/report/` at workspace setup and edit the
-  copy. It loads `echarts-5.6.1.min.js` and `mermaid-11.15.0.min.js` from
-  `/report-assets/` at runtime; vendor them locally with `fetch_chart_libs.py`
-  for `file://` review.
+  copy. It names no chart-library version; `fetch_chart_libs.py` resolves and
+  pins one into each report.
 - `assets/workspace/` — `AGENTS.md` + `CLAUDE.md` copied into the workspace so
   the deterministic evidence posture survives the skill run.
 - `references/EVIDENCE-MODEL.md` — the evidence model (Derived / Analysis /

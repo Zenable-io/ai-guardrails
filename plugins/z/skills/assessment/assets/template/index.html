@@ -398,6 +398,18 @@
 <!-- EXTENSIONS-BEGIN -->null<!-- EXTENSIONS-END -->
 </script>
 
+<!-- Which chart-library version this report loads, and the SRI hash that
+     verifies it. Written by scripts/fetch_chart_libs.py, which resolves it from
+     the version index the Zenable app publishes — this template deliberately
+     carries NO pin of its own, because it cannot know which version the app
+     serves and a stale hand-copied hash fails as a blocked script in the
+     reader's browser. Once written the values are fixed: the report stays
+     immutable and SRI-verified for its whole life. `null` means the resolve step
+     has not run yet; build_report.py refuses to bundle in that state. -->
+<script id="chart-libs-data" type="application/json">
+<!-- CHARTLIBS-BEGIN -->null<!-- CHARTLIBS-END -->
+</script>
+
 <footer class="report-footer">
   <p><span data-bind="meta.classification"></span> — Prepared by Zenable, Inc. — Report ID <span data-bind="meta.reportId"></span></p>
 </footer>
