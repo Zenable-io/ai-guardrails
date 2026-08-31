@@ -82,6 +82,24 @@ jobs:
             exit 0
           fi
 
+          # Idempotency guard: the computed tag must not already exist on the
+          # remote. If it does and it points at HEAD, a previous run already
+          # released this exact state — skip quietly (a replayed dispatch is
+          # not an error). If it points anywhere else, the remote and our
+          # computation disagree — fail loudly rather than clobber or
+          # double-release. The last ls-remote line is the peeled commit when
+          # the tag is annotated, so the HEAD comparison works either way.
+          existing="$(git ls-remote origin "refs/tags/v${version}" | awk '{sha=$1} END {print sha}')"
+          if [[ -n "$existing" ]]; then
+            if [[ "$existing" == "$(git rev-parse HEAD)" ]]; then
+              echo "Tag v${version} already exists on origin at HEAD; nothing to do."
+              echo "released=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::Tag v${version} already exists on origin at ${existing}, which is not HEAD; refusing to release."
+            exit 1
+          fi
+
           # Writes the new version into the manifests (version_toml/version_variables
           # in pyproject.toml), commits them with the changelog, pushes the commit to
           # main, tags that commit, and cuts the GitHub release — so the released tag
