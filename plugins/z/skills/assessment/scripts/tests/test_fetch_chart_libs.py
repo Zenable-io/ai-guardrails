@@ -241,3 +241,68 @@ def test_resolves_against_the_requested_environment(tmp_path, monkeypatch):
     )
     fetch_chart_libs.vendor_chart_libs(report_dir=report, subdomain="staging")
     assert all(url.startswith("https://staging.zenable.app/") for url in seen), seen
+
+
+@pytest.mark.unit
+def test_an_already_resolved_report_survives_an_index_outage(tmp_path, monkeypatch):
+    # The pin is fixed for the report's life and the bytes are on disk, so a
+    # temporary outage must not fail an assessment that needs nothing new.
+    echarts, mermaid = b"e", b"m"
+    report = _report_dir(tmp_path)
+    monkeypatch.setattr(
+        fetch_chart_libs,
+        "fetch",
+        _serve(
+            _index(echarts, mermaid),
+            {"echarts-5.6.1.min.js": echarts, "mermaid-11.15.0.min.js": mermaid},
+        ),
+    )
+    fetch_chart_libs.vendor_chart_libs(report_dir=report)
+    pinned = (report / "index.html").read_text(encoding="utf-8")
+
+    def _down(url):
+        raise fetch_chart_libs.ChartLibError("503")
+
+    monkeypatch.setattr(fetch_chart_libs, "fetch", _down)
+    results = fetch_chart_libs.vendor_chart_libs(report_dir=report)
+
+    assert {r["status"] for r in results} == {"kept"}
+    # The pin is untouched — a rerun must not silently change what ships.
+    assert (report / "index.html").read_text(encoding="utf-8") == pinned
+
+
+@pytest.mark.unit
+def test_an_unresolved_report_still_fails_when_the_index_is_down(tmp_path, monkeypatch):
+    # A first resolve genuinely needs the index: nothing else knows the version.
+    report = _report_dir(tmp_path)
+
+    def _down(url):
+        raise fetch_chart_libs.ChartLibError("503")
+
+    monkeypatch.setattr(fetch_chart_libs, "fetch", _down)
+    with pytest.raises(fetch_chart_libs.ChartLibError, match="503"):
+        fetch_chart_libs.vendor_chart_libs(report_dir=report)
+
+
+@pytest.mark.unit
+def test_a_tampered_vendored_copy_is_not_accepted_offline(tmp_path, monkeypatch):
+    # Falling back must still mean verified bytes, not merely present ones.
+    echarts, mermaid = b"e", b"m"
+    report = _report_dir(tmp_path)
+    monkeypatch.setattr(
+        fetch_chart_libs,
+        "fetch",
+        _serve(
+            _index(echarts, mermaid),
+            {"echarts-5.6.1.min.js": echarts, "mermaid-11.15.0.min.js": mermaid},
+        ),
+    )
+    fetch_chart_libs.vendor_chart_libs(report_dir=report)
+    (report / "report-assets" / "echarts-5.6.1.min.js").write_bytes(b"tampered")
+
+    def _down(url):
+        raise fetch_chart_libs.ChartLibError("503")
+
+    monkeypatch.setattr(fetch_chart_libs, "fetch", _down)
+    with pytest.raises(fetch_chart_libs.ChartLibError):
+        fetch_chart_libs.vendor_chart_libs(report_dir=report)

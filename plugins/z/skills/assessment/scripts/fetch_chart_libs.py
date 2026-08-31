@@ -129,6 +129,46 @@ def resolve_libs(index: dict) -> list[dict[str, str]]:
     return libs
 
 
+CHART_LIBS_BLOCK_RE = re.compile(
+    r"<!--\s*CHARTLIBS-BEGIN\s*-->(.*?)<!--\s*CHARTLIBS-END\s*-->", re.DOTALL
+)
+
+
+def existing_libs(html_path: Path) -> list[dict]:
+    """What a previous run already pinned into this report, if anything."""
+    if not html_path.is_file():
+        return []
+    match = CHART_LIBS_BLOCK_RE.search(html_path.read_text(encoding="utf-8"))
+    if not match:
+        return []
+    raw = match.group(1).strip()
+    if not raw or raw == "null":
+        return []
+    try:
+        return (json.loads(raw) or {}).get("libs") or []
+    except json.JSONDecodeError:
+        return []
+
+
+def usable_offline(libs: list[dict], target: Path) -> bool:
+    """True when every already-pinned library is vendored and matches its hash.
+
+    A report that has already been resolved needs nothing from the index: its
+    pin is fixed for life and the bytes are on disk. Re-running the step should
+    not turn a temporary outage into a failed assessment.
+    """
+    if not libs:
+        return False
+    for lib in libs:
+        path, integrity = lib.get("path"), lib.get("integrity")
+        if not path or not integrity:
+            return False
+        dest = target / path.rsplit("/", 1)[-1]
+        if not dest.is_file() or sri_digest(dest.read_bytes(), integrity) != integrity:
+            return False
+    return True
+
+
 def inline_into_html(html_path: Path, libs: list[dict]) -> None:
     """Pin the resolved libraries into the report's chart-libs-data block."""
     if not html_path.is_file():
@@ -151,11 +191,33 @@ def vendor_chart_libs(
     *, report_dir: Path, subdomain: str = "www", out_dir: Path | None = None
 ) -> list[dict[str, object]]:
     origin = f"https://{subdomain.strip() or 'www'}.zenable.app"
-    index = json.loads(fetch(f"{origin}/{VERSIONS_DOC}").decode("utf-8"))
-    libs = resolve_libs(index)
-
     target = out_dir or (report_dir / "report-assets")
     target.mkdir(parents=True, exist_ok=True)
+
+    try:
+        index = json.loads(fetch(f"{origin}/{VERSIONS_DOC}").decode("utf-8"))
+    except ChartLibError:
+        # A report that is already resolved is self-sufficient: its pin is fixed
+        # for life and the bytes are on disk. Only a first resolve genuinely
+        # needs the index, so don't let an outage fail an assessment that has
+        # everything it needs already.
+        already = existing_libs(report_dir / "index.html")
+        if usable_offline(already, target):
+            print(
+                "warning: could not reach the version index; keeping the pin this "
+                "report already carries (verified against the vendored bytes)",
+                file=sys.stderr,
+            )
+            return [
+                {
+                    "file": lib["path"].rsplit("/", 1)[-1],
+                    "bytes": (target / lib["path"].rsplit("/", 1)[-1]).stat().st_size,
+                    "status": "kept",
+                }
+                for lib in already
+            ]
+        raise
+    libs = resolve_libs(index)
 
     results: list[dict[str, object]] = []
     for lib in libs:
