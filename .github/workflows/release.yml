@@ -74,6 +74,10 @@ jobs:
           # the checkout step.
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           FORCE: ${{ inputs.force || 'auto' }}
+          # semantic-release authors its commit as "semantic-release
+          # <semantic-release>" unless overridden here — it does not read
+          # git config for this.
+          GIT_COMMIT_AUTHOR: "Zenable Automation <automation@zenable.io>"
         run: |
           git config user.name "Zenable Automation"
           git config user.email "automation@zenable.io"
