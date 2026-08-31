@@ -37,15 +37,20 @@ name = "pypi"
 url = "https://pypi.org/simple"
 default = true
 
-# Tag-only releases: main is protected and we never push commits to it, so
-# semantic-release only tags a commit that's already on main and cuts a GitHub
-# release. The current version is derived from git tags (tag_format), not from
-# any in-repo file — so there is nothing to write (version_toml/version_variables
-# empty) and nothing to build/commit. The tag + GitHub release are the source of
-# truth for the version; in-repo version fields stay static.
+# Releases run only via workflow_dispatch of the Release workflow. The current
+# version is derived from git tags (tag_format); semantic-release writes the new
+# version into the files below, commits that bump together with the changelog as
+# `chore(release): {version}`, pushes it to main, and tags that commit — so the
+# tag, the GitHub release, and the in-repo manifests always agree. Claude Code
+# reads the plugin version from the two manifests, not from git tags, which is
+# why they must be written as part of the release rather than by hand.
 [tool.semantic_release]
-version_toml = []
-version_variables = []
+version_toml = ["pyproject.toml:project.version"]
+version_variables = [
+    ".claude-plugin/marketplace.json:version",
+    "plugins/z/.claude-plugin/plugin.json:version",
+]
+commit_message = "chore(release): {version}"
 branch = "main"
 commit_parser = "angular"
 tag_format = "v{version}"
@@ -70,6 +75,9 @@ patch_tags = ["fix", "perf"]
 [tool.semantic_release.remote]
 name = "origin"
 type = "github"
+# Pushes use GH_TOKEN, which the Release workflow sets to a token minted for
+# the internal release app the branch ruleset's bypass list exempts (the
+# default GITHUB_TOKEN would be rejected as github-actions[bot]).
 ignore_token_for_push = false
 
 [tool.semantic_release.publish]

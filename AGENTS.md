@@ -18,9 +18,9 @@ not need — and outside readers must not get — the internal map.
 Public identifiers are fine: `zenable.app` URLs, the published MCP server, the
 plugin's own paths, and third-party names like `echarts` or `mermaid`.
 
-## Updating the plugin version
+## Releasing and the plugin version
 
-The plugin version lives in **two** manifests and both must be changed together:
+The plugin version lives in **two** manifests:
 
 - `.claude-plugin/marketplace.json` → `plugins[0].version`
 - `plugins/z/.claude-plugin/plugin.json` → `version`
@@ -29,11 +29,17 @@ Claude Code reads the version from these manifests, **not** from git tags. If th
 disagree with the released tag, `/plugin list` reports the stale manifest value and
 `/plugin update` sees no version change to act on.
 
-Releases are tag-only: `semantic-release` derives the version from git tags and has
-`version_toml`/`version_variables` empty (see the comment above `[tool.semantic_release]`
-in `pyproject.toml`), so **it will not write these files for you**. Bumping them is a
-manual step in the same PR as the change being released, chosen to match the version the
-commit types will produce (`feat:` → minor, `fix:` → patch, `!`/`BREAKING CHANGE:` → major).
+**Never bump these by hand.** Releases are cut manually by dispatching the Release
+workflow (Actions → Release → Run workflow). `semantic-release` derives the next
+version from the conventional commits since the last tag (`feat:` → minor, `fix:` →
+patch, `!`/`BREAKING CHANGE:` → major), writes it into both manifests and
+`pyproject.toml` (`version_toml`/`version_variables` under `[tool.semantic_release]`),
+commits the bump with the changelog as `chore(release): {version}`, pushes that commit
+to main, and tags it — so the released tag always points at manifests carrying the
+released version.
 
-A `chore:`-only PR does not trigger a release, so a bump landed on its own will leave the
-manifest ahead of the newest tag until the next `feat:`/`fix:` lands.
+If nothing since the last tag warrants a bump, the dispatch is a no-op; the `force`
+input (`patch`/`minor`/`major`) overrides the derived bump when the history
+under-represents the change. The push to main works because the workflow authenticates
+with a token minted for an internal GitHub App that the branch ruleset's bypass list
+exempts — release commits are the only commits that skip a PR.
