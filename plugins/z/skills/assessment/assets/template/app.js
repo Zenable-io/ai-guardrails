@@ -161,6 +161,30 @@
       anchor: `attack-${p._did}`,
       title: p.title ? `${p._did}: ${p.title}` : p._did,
     });
+  // Display ids are DERIVED, so any literal `F-004` typed into authored prose
+  // or into the mermaid source silently rots the moment a finding is added,
+  // rescored, or reordered — the text keeps pointing at a slot number that now
+  // belongs to a different finding. Nothing at render time can tell a stale
+  // literal from a correct one, so flag every literal and let the author
+  // replace it with the `[[key]]` cross-ref that renumbers itself.
+  // build_report.py enforces the same rule as a hard failure at bundle time.
+  const LITERAL_DID_RE = /\b(?:F-\d{3}|S-\d{3}|REC-\d{2}|AP-\d+)\b/g;
+  function findLiteralDisplayIds(data) {
+    // `_did` is injected above, so drop it — otherwise every finding reports
+    // itself. Authored data is what we are auditing.
+    const authored = JSON.stringify(data, (k, v) => (k === "_did" ? undefined : v));
+    return Array.from(new Set(String(authored).match(LITERAL_DID_RE) || []));
+  }
+  function warnLiteralDisplayIds() {
+    const hits = findLiteralDisplayIds(R);
+    if (!hits.length) return;
+    console.warn(
+      "[zenable-assessment] hardcoded display ids in authored data: " +
+        hits.join(", ") +
+        ". These do not follow renumbering — replace each with the [[key]] " +
+        "cross-ref of the item it points at.",
+    );
+  }
   const didForKey = (k) => (REF_BY_KEY.get(k) || {}).did || k;
   const refTitle = (k) => (REF_BY_KEY.get(k) || {}).title || k;
   const token = (kind, i) => `\uE000${kind}${i}\uE001`;
@@ -235,6 +259,56 @@
     });
     return s;
   }
+  // ---------- GFM pipe tables in prose --------------------------------------
+  // Authored findings routinely tabulate evidence (file / credential / identity
+  // rows). Without a table pass every row collapsed into one run-on paragraph
+  // with the `|---|---|` separator rendered as literal text.
+  function splitTableRow(line) {
+    const s = line.trim().replace(/^\|/, "").replace(/\|$/, "");
+    const cells = [];
+    let cur = "";
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "\\" && s[i + 1] === "|") {
+        cur += "|";
+        i++;
+        continue;
+      }
+      if (s[i] === "|") {
+        cells.push(cur.trim());
+        cur = "";
+        continue;
+      }
+      cur += s[i];
+    }
+    cells.push(cur.trim());
+    return cells;
+  }
+  // A separator row is what distinguishes a table from prose that merely
+  // contains a pipe, so require it: every cell must be `---`, `:--`, or `--:`.
+  function tableAlignments(line) {
+    if (line.indexOf("|") === -1) return null;
+    const cells = splitTableRow(line);
+    if (!cells.length) return null;
+    const aligns = [];
+    for (const cell of cells) {
+      // GFM allows one or more dashes, so `:-:` is a legal centre marker — an
+      // over-strict `-{2,}` silently demoted the whole table back to prose.
+      const m = cell.match(/^(:?)-+(:?)$/);
+      if (!m) return null;
+      aligns.push(
+        m[1] && m[2] ? "center" : m[2] ? "right" : m[1] ? "left" : "",
+      );
+    }
+    return aligns;
+  }
+  function renderTableRow(tag, cells, aligns, footnotes) {
+    const tds = cells.map((cell, i) => {
+      const align = aligns[i] ? ` style="text-align:${aligns[i]}"` : "";
+      return `<${tag}${align}>${renderInline(cell, footnotes)}</${tag}>`;
+    });
+    return `<tr>${tds.join("")}</tr>`;
+  }
+
   function renderProse(text, footnotes) {
     const out = [];
     for (const block of String(text || "").split(/\n\n+/)) {
@@ -254,6 +328,33 @@
           flush();
           out.push(`<h4 class="finding-subhead">${renderInline(h[1], footnotes)}</h4>`);
           k++;
+          continue;
+        }
+        const aligns =
+          line.indexOf("|") !== -1 && k + 1 < lines.length
+            ? tableAlignments(lines[k + 1])
+            : null;
+        if (aligns) {
+          flush();
+          const header = splitTableRow(line);
+          const rows = [];
+          k += 2;
+          while (k < lines.length && lines[k].indexOf("|") !== -1) {
+            rows.push(splitTableRow(lines[k]));
+            k++;
+          }
+          // Pad/truncate body rows to the header width so a short row can't
+          // shift the remaining cells into the wrong columns.
+          const body = rows.map((r) => {
+            const cells = r.slice(0, header.length);
+            while (cells.length < header.length) cells.push("");
+            return renderTableRow("td", cells, aligns, footnotes);
+          });
+          out.push(
+            `<div class="prose-table-wrap"><table class="prose-table">` +
+              `<thead>${renderTableRow("th", header, aligns, footnotes)}</thead>` +
+              `<tbody>${body.join("")}</tbody></table></div>`,
+          );
           continue;
         }
         if (/^-\s+/.test(line)) {
@@ -358,7 +459,7 @@
 
   function renderSummary() {
     const counts = SEV_ORDER.reduce((acc, s) => ((acc[s] = 0), acc), {});
-    for (const f of R.findings) {
+    for (const f of R.findings || []) {
       const severity = normalizeFindingSeverity(f.severity);
       counts[severity] = (counts[severity] || 0) + 1;
     }
@@ -385,7 +486,7 @@
 
     const ul = $("#takeaways");
     ul.innerHTML = "";
-    for (const t of R.takeaways)
+    for (const t of R.takeaways || [])
       ul.appendChild(el("li", { html: renderInline(t, []) }));
   }
 
@@ -398,21 +499,28 @@
   // ---------- Scope ---------------------------------------------------------
 
   function renderScope() {
+    const scope = R.scope || {};
     const fill = (selector, items) => {
       const ul = $(selector);
+      if (!ul) return;
       ul.innerHTML = "";
-      for (const i of items) ul.appendChild(el("li", { text: i }));
+      for (const i of items || []) ul.appendChild(el("li", { text: i }));
     };
-    fill("#scopeIn", R.scope.inScope);
-    fill("#scopeOut", R.scope.outOfScope);
-    $("#scopeNotes").textContent = (R.scope.notes || []).join(" ");
+    fill("#scopeIn", scope.inScope);
+    fill("#scopeOut", scope.outOfScope);
+    $("#scopeNotes").textContent = (scope.notes || []).join(" ");
   }
 
   // ---------- Trust Boundary, Data Flow & Attack Paths ----------------------
 
+  // Mermaid renders asynchronously into a single shared node, so both the
+  // in-flight render and the theme it is rendering at are module state.
+  let _trustRender = Promise.resolve();
+  let _trustTheme = null;
+
   function renderTrustBoundary() {
     const tb = R.trustBoundary;
-    if (!tb) return;
+    if (!tb) return Promise.resolve();
     const lede = $("#trustSummary");
     if (lede) lede.innerHTML = renderProse(tb.summary || "", []);
     const dia = $("#trustDiagram");
@@ -445,41 +553,56 @@
     if (window.mermaid && dia && tb.mermaid) {
       const targetTheme = isDarkMode() ? "dark" : "default";
       // mermaid.run is async: if a print snapshot is taken before it resolves,
-      // the diagram prints BLANK. So when the on-screen SVG already matches the
-      // theme we need (printing forces light and the screen was already light),
-      // keep the rendered diagram instead of wiping + re-rendering it.
-      if (
-        dia.getAttribute("data-mermaid-theme") === targetTheme &&
-        dia.querySelector("svg")
-      ) {
-        return Promise.resolve();
+      // the diagram prints BLANK. So when the diagram is already rendered (or
+      // queued to render) at the theme we need — printing forces light and the
+      // screen was already light — keep it instead of wiping + re-rendering.
+      // Tracked in a variable, not on the node: the queued render has not
+      // touched the DOM yet, so reading the node would compare against the
+      // PREVIOUS theme and skip a re-render that is genuinely needed.
+      if (_trustTheme === targetTheme && dia.querySelector("svg")) {
+        return _trustRender;
       }
-      try {
-        // Re-init + reset the node each call so a theme toggle re-renders the
-        // diagram legibly: dark mermaid theme on dark mode, default on light.
-        window.mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "loose",
-          theme: targetTheme,
+      _trustTheme = targetTheme;
+      // Serialize renders. Two toggles in quick succession used to run mermaid
+      // twice over the same node concurrently: the second call cleared
+      // data-processed before the first re-set it, so the second run skipped
+      // the node and left the diagram at the wrong theme — and the losing run
+      // rejected with nothing attached to catch it.
+      _trustRender = _trustRender
+        .catch(() => {})
+        .then(() => {
+          // Re-init + reset the node each call so a theme toggle re-renders the
+          // diagram legibly: dark mermaid theme on dark mode, default on light.
+          window.mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: "loose",
+            theme: targetTheme,
+          });
+          dia.className = "mermaid";
+          dia.removeAttribute("data-processed");
+          // Resolve [[key]] cross-refs to their live display ids (plain text —
+          // the diagram can't hold links) before mermaid parses the source.
+          dia.textContent = tb.mermaid.replace(/\[\[([a-z0-9]{4,8})\]\]/g, (m, k) =>
+            didForKey(k),
+          );
+          dia.setAttribute("data-mermaid-theme", targetTheme);
+          return window.mermaid.run({ nodes: [dia] });
+        })
+        .catch((e) => {
+          // mermaid reports a syntax error by REJECTING, so a synchronous
+          // try/catch never saw it — the report showed a blank figure and an
+          // unhandled rejection instead of naming the broken diagram.
+          console.warn("mermaid render failed", e, "Diagram source:", tb.mermaid);
+          showDiagramError(`Diagram syntax error: ${(e && e.message) || e}`);
+          _trustTheme = null; // let the next attempt retry rather than no-op
         });
-        dia.className = "mermaid";
-        dia.removeAttribute("data-processed");
-        // Resolve [[key]] cross-refs to their live display ids (plain text — the
-        // diagram can't hold links) before mermaid parses the source.
-        dia.textContent = tb.mermaid.replace(/\[\[([a-z0-9]{4,8})\]\]/g, (m, k) =>
-          didForKey(k),
-        );
-        dia.setAttribute("data-mermaid-theme", targetTheme);
-        // Returned so callers (printReport) can await the async render before
-        // taking the print snapshot.
-        return window.mermaid.run({ nodes: [dia] });
-      } catch (e) {
-        console.warn("mermaid render failed", e, "Diagram source:", tb.mermaid);
-        showDiagramError(`Diagram syntax error: ${e.message}`);
-      }
+      // Returned so callers (printReport) can await the async render before
+      // taking the print snapshot.
+      return _trustRender;
     } else if (dia && tb.mermaid) {
       showDiagramError("Mermaid library not loaded");
     }
+    return Promise.resolve();
   }
 
   function renderAttackPaths() {
@@ -605,48 +728,6 @@
     }
   }
 
-  // ---------- Tokenization Logic Review -------------------------------------
-
-  function renderTokenization() {
-    const t = R.tokenization;
-    const root = $("#tokenizationList");
-    if (!t || !root) return;
-    root.innerHTML = "";
-    const ICON = { true: "✅", false: "❌", warn: "⚠️" };
-    const VERDICT = { true: "Pass", false: "Fail", warn: "Warning" };
-    for (const sec of t.sections || []) {
-      const key = String(sec.pass);
-      const footnotes = [];
-      const findingHtml = renderProse(sec.finding || "", footnotes);
-      const noteHtml = sec.accessNote ? renderInline(sec.accessNote, footnotes) : "";
-      const refsEl = footnotesListEl(footnotes);
-      root.appendChild(
-        el(
-          "div",
-          { class: "token-section", "data-status": key },
-          [
-            el("div", { class: "token-head" }, [
-              el("span", { class: "token-status", text: ICON[key] || "" }),
-              el("span", { class: "token-title", text: sec.title || "" }),
-              el("span", { class: "token-verdict", text: VERDICT[key] || "" }),
-            ]),
-            sec.question
-              ? el("p", { class: "token-question", text: sec.question })
-              : null,
-            el("div", { class: "token-finding finding-prose", html: findingHtml }),
-            noteHtml ? el("p", { class: "token-note", html: noteHtml }) : null,
-            refsEl
-              ? el("details", { class: "finding-collapse" }, [
-                  el("summary", { text: "References" }),
-                  refsEl,
-                ])
-              : null,
-          ].filter(Boolean),
-        ),
-      );
-    }
-  }
-
   // ---------- Heat Map ------------------------------------------------------
 
   /* Risk matrix axes are continuous 0–100 (computed from scoring inputs).
@@ -698,6 +779,32 @@
       blue: v("--z-blue", "#05385B"),
       blueLight: v("--z-blue-light", "#064A77"),
     };
+  }
+
+  /* Every chart is disposed and re-created whenever the theme or the print
+     palette changes (echarts bakes colors in at setOption time). A resize
+     listener that closed over the chart instance it was registered with would
+     therefore be driving a DISPOSED chart after the first toggle, throwing on
+     each resize and leaving the layout stale. Attach once per container and
+     always resize whatever `node._chart` currently holds.
+     On print, resize to the CONTAINER (not a fixed box): once print media is
+     active the container is at the true print width, so echarts fills the page
+     exactly — a hardcoded box only ever filled a fraction of it. */
+  function attachChartResize(node) {
+    if (!node || node._resizeAttached) return;
+    const safeResize = () => {
+      const c = node._chart;
+      if (c && !(c.isDisposed && c.isDisposed())) c.resize();
+    };
+    window.addEventListener("resize", safeResize);
+    window.addEventListener("beforeprint", safeResize);
+    window.addEventListener("afterprint", safeResize);
+    // Safari/Chromium emit matchMedia change in addition to beforeprint; it
+    // fires once print media (and its layout) is active, so the container is at
+    // the print width here — resizing to it fills the page.
+    const mq = window.matchMedia && window.matchMedia("print");
+    if (mq && mq.addEventListener) mq.addEventListener("change", safeResize);
+    node._resizeAttached = true;
   }
 
   function renderHeatmap() {
@@ -925,29 +1032,7 @@
     });
 
     // Resize handling — keep SVG crisp if the page reflows or print fires.
-    // Always target the LIVE chart (container._chart): renderHeatmap disposes +
-    // re-creates the instance on theme/print changes, so a listener that captured
-    // the original `chart` would resize a disposed instance and leave the matrix
-    // mis-laid-out. On print, resize to the CONTAINER (not a fixed box): once
-    // print media is active the container is at the true print width, so echarts
-    // fills the page exactly — a hardcoded box only ever filled a fraction of it.
-    if (!container._resizeAttached) {
-      const safeResize = (opts) => {
-        const c = container._chart;
-        if (c && !(c.isDisposed && c.isDisposed())) c.resize(opts);
-      };
-      window.addEventListener("resize", () => safeResize());
-      window.addEventListener("beforeprint", () => safeResize());
-      window.addEventListener("afterprint", () => safeResize());
-      // Safari/Chromium emit matchMedia change in addition to beforeprint; it
-      // fires once print media (and its layout) is active, so the container is at
-      // the print width here — resizing to it fills the page.
-      const mq = window.matchMedia("print");
-      if (mq && mq.addEventListener) {
-        mq.addEventListener("change", () => safeResize());
-      }
-      container._resizeAttached = true;
-    }
+    attachChartResize(container);
 
     // ----- 4. Key (legend list) under the chart -----
     const key = $("#heatmapKey");
@@ -1090,7 +1175,11 @@
       cols.map((h) => el("th", { text: h })),
     );
     const bodyRows = cves.map((c) => {
-      const sev = c.cvss.severity || severityFromCvss(c.cvss.score);
+      // A CVE with no CVSS block used to throw here and take the WHOLE table
+      // down with it (safeRender swallows the error, so §8 just rendered empty).
+      const cvss = c.cvss || {};
+      const score = typeof cvss.score === "number" ? cvss.score : null;
+      const sev = cvss.severity || (score != null ? severityFromCvss(score) : "");
       const fkey = c.relatedFindingKey || c.relatedFindingId;
       const fdid = fkey ? didForKey(fkey) : "";
       return el("tr", { id: `cve-${c.id}` }, [
@@ -1109,14 +1198,16 @@
         el(
           "td",
           {},
-          el("span", {
-            class: "cvss-score",
-            "data-sev": sev,
-            text: `${c.cvss.score.toFixed(1)} ${sev}`,
-          }),
+          score != null
+            ? el("span", {
+                class: "cvss-score",
+                "data-sev": sev,
+                text: `${score.toFixed(1)} ${sev}`.trim(),
+              })
+            : el("span", { text: sev || "—" }),
         ),
-        el("td", { text: c.affectedRange }),
-        el("td", { text: c.fixedIn }),
+        el("td", { text: c.affectedRange || "—" }),
+        el("td", { text: c.fixedIn || "—" }),
         el("td", { text: c.exploitablePathway }),
         el(
           "td",
@@ -1145,7 +1236,19 @@
     const root = $("#customRequirementsList");
     if (!root || !R.customRequirements) return;
     root.innerHTML = "";
-    for (const s of R.customRequirements.sections) {
+    for (const s of R.customRequirements.sections || []) {
+      // Authored prose here goes through the same markdown pipeline as every
+      // other prose field (findings, strengths, attack paths). Rendering it as
+      // textContent left `code`, **bold**, [[key]] cross-refs and links showing
+      // as raw source. Footnotes are collected in reading order.
+      const footnotes = [];
+      const questionHtml = s.question ? renderInline(s.question, footnotes) : "";
+      const findingHtml = renderProse(s.finding || "", footnotes);
+      const evidenceItems = (s.evidence || []).map((e) =>
+        el("li", { html: renderInline(e, footnotes) }),
+      );
+      const refsEl = footnotesListEl(footnotes);
+      const status = String(s.status || "");
       root.appendChild(
         el(
           "article",
@@ -1153,20 +1256,24 @@
           [
             el("header", { class: "tok-head" }, [
               el("span", { class: "tok-title", text: s.title }),
-              el("span", {
-                class: "tok-status",
-                "data-status": s.status,
-                text: s.status.replace(/-/g, " "),
-              }),
-            ]),
-            el("div", { class: "tok-q", text: s.question }),
-            el("div", { class: "tok-body", text: s.finding }),
-            s.evidence && s.evidence.length
-              ? el(
-                  "ul",
-                  { class: "tok-evidence" },
-                  s.evidence.map((e) => el("li", { text: e })),
-                )
+              status
+                ? el("span", {
+                    class: "tok-status",
+                    "data-status": status,
+                    text: status.replace(/-/g, " "),
+                  })
+                : null,
+            ].filter(Boolean)),
+            questionHtml ? el("div", { class: "tok-q", html: questionHtml }) : null,
+            el("div", { class: "tok-body finding-prose", html: findingHtml }),
+            evidenceItems.length
+              ? el("ul", { class: "tok-evidence" }, evidenceItems)
+              : null,
+            refsEl
+              ? el("details", { class: "finding-collapse" }, [
+                  el("summary", { text: "References" }),
+                  refsEl,
+                ])
               : null,
           ].filter(Boolean),
         ),
@@ -1282,17 +1389,36 @@
 
     const u = $("#unconfirmedList");
     u.innerHTML = "";
-    for (const item of R.unconfirmed) {
+    for (const item of R.unconfirmed || []) {
+      // `detail` and `followUp` are authored markdown like every other prose
+      // field. `followUp` used to be appended as a raw string node, so its
+      // backticks, links and [[key]] cross-refs printed as literal source.
+      const footnotes = [];
+      const detailHtml = renderInline(item.detail || "", footnotes);
+      const followHtml = item.followUp ? renderInline(item.followUp, footnotes) : "";
+      const refsEl = footnotesListEl(footnotes);
       u.appendChild(
-        el("li", {}, [
-          el("span", { class: "u-id", text: item.id }),
-          el("span", { class: "u-title", text: item.title }),
-          el("div", { class: "u-detail", text: item.detail }),
-          el("div", { class: "u-follow" }, [
-            el("b", { text: "Follow-up: " }),
-            item.followUp,
-          ]),
-        ]),
+        el(
+          "li",
+          {},
+          [
+            el("span", { class: "u-id", text: item.id }),
+            el("span", { class: "u-title", text: item.title }),
+            el("div", { class: "u-detail", html: detailHtml }),
+            followHtml
+              ? el("div", {
+                  class: "u-follow",
+                  html: "<b>Follow-up: </b>" + followHtml,
+                })
+              : null,
+            refsEl
+              ? el("details", { class: "finding-collapse" }, [
+                  el("summary", { text: "References" }),
+                  refsEl,
+                ])
+              : null,
+          ].filter(Boolean),
+        ),
       );
     }
   }
@@ -1303,6 +1429,35 @@
     const D = loadInlineJson("dependencies-data");
     if (!D) return;
     $("#appendixDNote").textContent = D.note || "";
+
+    // Order mirrors the section order in index.html: vulnerabilities (D.1)
+    // first, then the provenance and inventory that back them.
+    const vulns = D.vulnerabilities || [];
+    const vulnsEmpty = $("#depVulnsEmpty");
+    if (vulnsEmpty) {
+      vulnsEmpty.textContent = vulns.length ? "" : "No known vulnerabilities found.";
+    }
+    const vulnBody = $("#depVulnsBody");
+    vulnBody.innerHTML = "";
+    for (const v of vulns) {
+      vulnBody.appendChild(
+        el("tr", {}, [
+          el("td", {}, el("code", { text: v.id })),
+          el(
+            "td",
+            {},
+            el("span", {
+              class: "finding-badge",
+              "data-sev": v.severity,
+              text: v.severity,
+            }),
+          ),
+          el("td", {}, el("code", { text: v.package })),
+          el("td", { class: "kind", text: v.version }),
+          el("td", { text: v.fixed_in || "—" }),
+        ]),
+      );
+    }
 
     const scansBody = $("#depScansBody");
     scansBody.innerHTML = "";
@@ -1341,33 +1496,6 @@
         el("tr", {}, [
           el("td", { text: lc.license }),
           el("td", { text: String(lc.count) }),
-        ]),
-      );
-    }
-
-    const vulns = D.vulnerabilities || [];
-    const vulnsEmpty = $("#depVulnsEmpty");
-    if (vulnsEmpty) {
-      vulnsEmpty.textContent = vulns.length ? "" : "No known vulnerabilities found.";
-    }
-    const vulnBody = $("#depVulnsBody");
-    vulnBody.innerHTML = "";
-    for (const v of vulns) {
-      vulnBody.appendChild(
-        el("tr", {}, [
-          el("td", {}, el("code", { text: v.id })),
-          el(
-            "td",
-            {},
-            el("span", {
-              class: "finding-badge",
-              "data-sev": v.severity,
-              text: v.severity,
-            }),
-          ),
-          el("td", {}, el("code", { text: v.package })),
-          el("td", { class: "kind", text: v.version }),
-          el("td", { text: v.fixed_in || "—" }),
         ]),
       );
     }
@@ -1857,8 +1985,14 @@
     });
   }
 
+  // Prose tables are authored evidence inside a finding — a few rows in a fixed,
+  // meaningful order. Sorting them is noise, so only the generated appendix and
+  // section tables get the sort affordance.
   function makeTablesSortable() {
-    for (const table of $$("table")) makeDomTableSortable(table);
+    for (const table of $$("table")) {
+      if (table.classList.contains("prose-table")) continue;
+      makeDomTableSortable(table);
+    }
   }
 
   function buildYearlyChart(dora) {
@@ -1919,10 +2053,7 @@
         },
       ],
     });
-    if (!node._resizeAttached) {
-      window.addEventListener("resize", () => chart.resize());
-      node._resizeAttached = true;
-    }
+    attachChartResize(node);
   }
 
   function buildCommitSizeChart(rows) {
@@ -2018,23 +2149,27 @@
         },
       ],
     });
-    if (!node._resizeAttached) {
-      window.addEventListener("resize", () => chart.resize());
-      window.addEventListener("beforeprint", () => chart.resize());
-      window.addEventListener("afterprint", () => chart.resize());
-      node._resizeAttached = true;
-    }
+    attachChartResize(node);
   }
 
   // Module-scoped state so theme changes / dimension toggles preserve the
   // user's scrub position and current dimension.
   let _raceCurrentIdx = null;
   let _raceDimension = "commits"; // "commits" | "loc"
+  // Playback timer is module-scoped so a rebuild (theme toggle, dimension
+  // switch) can stop the PREVIOUS build's interval. Left running, it kept
+  // calling setOption on the chart the rebuild had already disposed.
+  let _raceTimer = null;
 
   function buildRaceChart(rc) {
     const node = $("#raceChart");
     if (!node) return;
-    const months = rc.months;
+    if (_raceTimer) {
+      clearInterval(_raceTimer);
+      _raceTimer = null;
+    }
+    const months = rc.months || [];
+    if (!months.length) return;
     // Pick the series matching the current dimension (fall back to commits).
     const sourceSeries =
       _raceDimension === "loc" && rc.loc_series ? rc.loc_series : rc.series;
@@ -2162,11 +2297,13 @@
     const resetBtn = $("#raceReset");
     scrub.max = months.length - 1;
     // Restore prior scrub position (e.g. after a theme toggle re-render).
-    const startIdx = _raceCurrentIdx != null ? _raceCurrentIdx : months.length - 1;
+    const startIdx =
+      _raceCurrentIdx != null
+        ? Math.max(0, Math.min(months.length - 1, _raceCurrentIdx))
+        : months.length - 1;
     scrub.value = startIdx;
     let idx = startIdx;
     let playing = false;
-    let timer = null;
 
     function paint(i) {
       idx = i;
@@ -2183,7 +2320,7 @@
       playing = true;
       playBtn.innerHTML = "&#10074;&#10074; Pause";
       if (idx >= months.length - 1) idx = 0;
-      timer = setInterval(() => {
+      _raceTimer = setInterval(() => {
         if (idx >= months.length - 1) {
           stop();
           return;
@@ -2194,18 +2331,31 @@
     function stop() {
       playing = false;
       playBtn.innerHTML = "&#9654; Play";
-      if (timer) clearInterval(timer);
-      timer = null;
+      if (_raceTimer) clearInterval(_raceTimer);
+      _raceTimer = null;
     }
-    playBtn.addEventListener("click", play);
-    resetBtn.addEventListener("click", () => {
+    function onReset() {
       stop();
       paint(0);
-    });
-    scrub.addEventListener("input", (ev) => {
+    }
+    function onScrub(ev) {
       stop();
       paint(Number(ev.target.value));
-    });
+    }
+    // Every rebuild produces fresh closures bound to the new chart instance, so
+    // the PREVIOUS build's handlers must come off first. Without this, one
+    // theme toggle left two Play handlers on the button — a second click
+    // started a second interval and the two fought over the scrub position.
+    const prev = node._controls;
+    if (prev) {
+      playBtn.removeEventListener("click", prev.play);
+      resetBtn.removeEventListener("click", prev.reset);
+      scrub.removeEventListener("input", prev.scrub);
+    }
+    node._controls = { play, reset: onReset, scrub: onScrub };
+    playBtn.addEventListener("click", play);
+    resetBtn.addEventListener("click", onReset);
+    scrub.addEventListener("input", onScrub);
 
     // Dimension toggle (Commits / LoC). Each click stops playback, updates
     // the chip pressed-state, and re-renders the whole race chart from rc.
@@ -2238,12 +2388,7 @@
     }
 
     paint(startIdx);
-    if (!node._resizeAttached) {
-      window.addEventListener("resize", () => chart.resize());
-      window.addEventListener("beforeprint", () => chart.resize());
-      window.addEventListener("afterprint", () => chart.resize());
-      node._resizeAttached = true;
-    }
+    attachChartResize(node);
   }
 
   // ---------- Theme toggle (light / dark) -----------------------------------
@@ -2332,7 +2477,6 @@
   const SUMMARY_OMITTED_SECTIONS = [
     "#samm",
     "#strengths",
-    "#tokenization",
     "#heatmap",
     "#findings",
     "#cves",
@@ -2607,51 +2751,75 @@
   // would wedge the entire report before any inline script runs. Dynamic
   // loading keeps hydration independent of chart delivery: boot waits at most
   // CHART_LIB_WAIT_MS, renders chart-less if needed, and fills the charts in
-  // when a slow library finally lands. The version + SRI pins must match the
-  // copies the Zenable app serves under /report-assets/ — bump them together.
-  const CHART_LIBS = [
-    {
-      global: "echarts",
-      file: "echarts-5.6.1.min.js",
-      integrity:
-        "sha384-pPi0zxBAoDu6+JXW/C68UZLvBUUtU+7zonhif43rqj7pxsGyqyqzcian2Rj37Rss",
-    },
-    {
-      global: "mermaid",
-      file: "mermaid-11.15.0.min.js",
-      integrity:
-        "sha384-yQ4mmBBT+vhTAwjFH0toJXNYJ6O4usWnt6EPIdWwrRvx2V/n5lXuDZQwQFeSFydF",
-    },
-  ];
+  // when a slow library finally lands.
+  //
+  // This template carries NO version or hash of its own. It cannot know which
+  // version the app currently serves, and a hand-copied pin that falls behind
+  // fails as a browser-blocked script — a report that silently loses its charts
+  // with nothing logged anywhere the authors would see. Instead
+  // scripts/fetch_chart_libs.py resolves the version and integrity from the
+  // index the app publishes and writes them into the `chart-libs-data` block
+  // below. From that moment the values are fixed in this report, so it stays
+  // immutable and SRI-verified for its whole life.
+  //
+  // Each `path` is one whole literal string in that block rather than assembled
+  // from a filename at the point of use. Asset-retention tooling decides which
+  // versions are still needed by scanning already-issued report.html files for
+  // this exact `report-assets/<name>-<semver>.min.js` shape; a version it
+  // cannot see there looks unreferenced and becomes eligible for removal, which
+  // would 404 the pinned URL those issued reports depend on. Keep it literal.
+  const CHART_LIBS = (loadInlineJson("chart-libs-data") || {}).libs || [];
   const CHART_LIB_WAIT_MS = 8000;
 
+  // A `file://` page cannot satisfy Subresource Integrity: the response is
+  // opaque, so the browser has nothing to hash and BLOCKS the script outright —
+  // and `crossOrigin` turns the same load into a CORS failure. Passing a null
+  // integrity omits both attributes, which is the only way a local vendored
+  // copy loads at all. That copy's bytes are verified against this same pin
+  // when `fetch_chart_libs.py` downloads it, so the pin is still enforced —
+  // just at vendor time instead of load time.
   function loadScript(src, integrity) {
     return new Promise((resolve) => {
       const s = document.createElement("script");
       s.src = src;
       s.async = true;
-      s.integrity = integrity;
-      s.crossOrigin = "anonymous";
+      if (integrity) {
+        s.integrity = integrity;
+        s.crossOrigin = "anonymous";
+      }
       s.onload = () => resolve(true);
       s.onerror = () => resolve(false);
       document.head.appendChild(s);
     });
   }
 
-  // Hosted (on *.zenable.app, or inside the app's srcdoc viewer iframe, whose
-  // base URL is the app origin) the root-relative URL resolves to the pinned
-  // same-origin asset. Opened LOCALLY (file://) it fails fast and the second
-  // attempt pulls the SAME pinned file from the matching environment:
-  // https://<sub>.zenable.app, <sub> = window.__ZENABLE_SUBDOMAIN__ or "www".
+  // AT RUNTIME (hosted on *.zenable.app, or inside the app's srcdoc viewer
+  // iframe, whose base URL is the app origin) the root-relative URL resolves to
+  // the pinned same-origin asset and SRI is enforced by the browser. That is
+  // always attempt 1, so a hosted report never reads a vendored copy.
+  //
+  // Opened LOCALLY from file:// there is no origin to resolve `/report-assets/`
+  // against, so attempt 2 reads the copy vendored NEXT TO the report by
+  // `scripts/fetch_chart_libs.py` (report/report-assets/) — offline-capable
+  // local review, no network round trip, no SRI (see loadScript). Attempt 3 is
+  // the last resort for a local report with no vendored copy: the SAME pinned
+  // file over https from the matching environment, <sub> =
+  // window.__ZENABLE_SUBDOMAIN__ or "www", with SRI enforced.
   async function loadChartLib(lib) {
     if (window[lib.global]) return true;
-    await loadScript(`/report-assets/${lib.file}`, lib.integrity);
+    const isFile = window.location && window.location.protocol === "file:";
+    // Branch rather than try both: a root-relative URL on file:// resolves to
+    // file:///report-assets/… and is rejected as a cross-origin request, which
+    // prints two CORS errors per library into the console of the very local
+    // review this path exists to support.
+    if (isFile) {
+      await loadScript(lib.path, null);
+    } else {
+      await loadScript(`/${lib.path}`, lib.integrity);
+    }
     if (window[lib.global]) return true;
     const sub = (window.__ZENABLE_SUBDOMAIN__ || "").trim() || "www";
-    await loadScript(
-      `https://${sub}.zenable.app/report-assets/${lib.file}`,
-      lib.integrity,
-    );
+    await loadScript(`https://${sub}.zenable.app/${lib.path}`, lib.integrity);
     return Boolean(window[lib.global]);
   }
 
@@ -2680,6 +2848,7 @@
 
   async function boot() {
     initTheme();
+    safeRender("warnLiteralDisplayIds", warnLiteralDisplayIds);
     bind();
     await ensureChartLibs();
     safeRender("renderSummary", renderSummary);
@@ -2688,7 +2857,6 @@
     safeRender("renderAttackPaths", renderAttackPaths);
     safeRender("renderSamm", renderSamm);
     safeRender("renderStrengths", renderStrengths);
-    safeRender("renderTokenization", renderTokenization);
     safeRender("renderHeatmap", renderHeatmap);
     safeRender("renderFindings", renderFindings);
     safeRender("renderCves", renderCves);
@@ -2742,6 +2910,39 @@
         e.matches ? onBeforePrint() : onAfterPrint(),
       );
     }
+  }
+
+  // Test seam. The harness defines window.__ZENABLE_TEST_HOOK__ *before*
+  // loading app.js and receives the real internals; a published report never
+  // defines it, so this is inert in every browser that opens one. Exporting the
+  // functions rather than reimplementing them in the test is the whole point —
+  // a test that re-derives the markdown pipeline proves nothing about the
+  // pipeline the report actually runs.
+  if (typeof window.__ZENABLE_TEST_HOOK__ === "function") {
+    window.__ZENABLE_TEST_HOOK__({
+      renderInline,
+      renderProse,
+      splitTableRow,
+      tableAlignments,
+      escapeHtml,
+      cleanDownloadPath,
+      normalizeFindingSeverity,
+      likelihoodScoreOf,
+      impactScoreOf,
+      bucketOf,
+      zoneOf,
+      severityFromCvss,
+      didForKey,
+      refTitle,
+      findLiteralDisplayIds,
+      loadChartLib,
+      ensureChartLibs,
+      CHART_LIBS,
+      FINDINGS_ORDERED,
+      STRENGTHS_ORDERED,
+      RECS_ORDERED,
+      ATTACKS_ORDERED,
+    });
   }
 
   if (document.readyState === "loading") {

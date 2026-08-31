@@ -95,6 +95,7 @@ tasks:
       - task: test-plugin
       - task: test-scripts
       - task: test-assessment-scripts
+      - task: test-report-template
 
   test-plugin:
     desc: Validate the z plugin structure
@@ -121,6 +122,19 @@ tasks:
       # surface at zero. --exclude-newer gives a freshly published (potentially
       # compromised) release time to be caught before we pull it in.
       - uv run --with pytest --exclude-newer "7 days" --no-project pytest plugins/z/skills/assessment/scripts/tests -q
+
+  test-report-template:
+    desc: Test the assessment report template's render pipeline (app.js)
+    preconditions:
+      # node ships the test runner as a builtin, so this needs no npm install and
+      # adds no dependency to a repo that deliberately has none
+      - sh: which node
+        msg: "node (18+) is required to test the report template"
+    cmds:
+      # The glob is expanded by the shell, not by node: passing plain file paths
+      # works on every node version that has --test, while glob-as-argument
+      # support arrived later.
+      - node --test plugins/z/skills/assessment/tests/*.test.js
 
   clean:
     desc: Clean up build artifacts, cache files/directories, temp files, etc.

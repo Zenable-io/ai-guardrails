@@ -1,4 +1,5 @@
 import json
+import re
 import zipfile
 from pathlib import Path
 
@@ -19,6 +20,9 @@ def _write_report(report_dir: Path, *, extra_resource: str = "") -> None:
 </head>
 <body>
   <main>Report</main>
+  <script id="chart-libs-data" type="application/json">
+<!-- CHARTLIBS-BEGIN -->{{"libs":[{{"global":"echarts","path":"report-assets/echarts-5.6.1.min.js","integrity":"sha384-x"}}]}}<!-- CHARTLIBS-END -->
+  </script>
   {extra_resource}
   <script src="data.js"></script>
   <script src="app.js"></script>
@@ -206,3 +210,86 @@ def test_decode_js_string_rejects_short_unicode_escape():
 def test_decode_js_string_rejects_invalid_unicode_escape():
     with pytest.raises(ValueError, match="invalid JS unicode escape"):
         build_report._decode_js_string('"abc\\uZZZZ"', 0)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("literal", ["F-004", "S-002", "REC-01", "AP-3"])
+def test_build_report_rejects_hardcoded_display_ids(tmp_path, literal):
+    # F-NNN / S-NNN / REC-NN / AP-N are derived from severity x score at render
+    # time. A literal names a slot, not an item, so it starts pointing at the
+    # wrong thing the moment a finding is added or rescored.
+    report_dir = tmp_path / "report"
+    _write_report(report_dir)
+    data_js = report_dir / "data.js"
+    data_js.write_text(
+        data_js.read_text(encoding="utf-8").replace(
+            'takeaways: ["One concise takeaway."]',
+            f'takeaways: ["{literal} committed private keys."]',
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="hardcodes derived display ids"):
+        build_report.build_bundle(
+            report_dir=report_dir,
+            context_dir=tmp_path / "context",
+            evidence_dir=tmp_path / "evidence",
+            experiments_dir=tmp_path / "experiments",
+            out_dir=tmp_path / "dist",
+            zip_out=tmp_path / "dist" / "bundle.zip",
+        )
+
+
+@pytest.mark.unit
+def test_build_report_allows_key_cross_refs(tmp_path):
+    # The [[key]] form is the supported cross-ref and must not trip the guard.
+    report_dir = tmp_path / "report"
+    _write_report(report_dir)
+    data_js = report_dir / "data.js"
+    data_js.write_text(
+        data_js.read_text(encoding="utf-8").replace(
+            'takeaways: ["One concise takeaway."]',
+            'takeaways: ["[[k3f9wq]] committed private keys."]',
+        ),
+        encoding="utf-8",
+    )
+    build_report.validate_display_ids(data_js.read_text(encoding="utf-8"))
+
+
+@pytest.mark.unit
+def test_build_report_refuses_unresolved_chart_libs(tmp_path):
+    # A report whose chart libraries were never resolved ships with no risk
+    # matrix, no diagram and no history charts — broken, not degraded, and
+    # invisible until a reader opens it.
+    report_dir = tmp_path / "report"
+    _write_report(report_dir)
+    index = report_dir / "index.html"
+    index.write_text(
+        re.sub(
+            r"<!-- CHARTLIBS-BEGIN -->.*?<!-- CHARTLIBS-END -->",
+            "<!-- CHARTLIBS-BEGIN -->null<!-- CHARTLIBS-END -->",
+            index.read_text(encoding="utf-8"),
+            flags=re.DOTALL,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="fetch_chart_libs"):
+        build_report.build_report_html(report_dir)
+
+
+@pytest.mark.unit
+def test_build_report_refuses_a_chart_lib_without_integrity(tmp_path):
+    report_dir = tmp_path / "report"
+    _write_report(report_dir)
+    index = report_dir / "index.html"
+    index.write_text(
+        re.sub(
+            r"<!-- CHARTLIBS-BEGIN -->.*?<!-- CHARTLIBS-END -->",
+            '<!-- CHARTLIBS-BEGIN -->{"libs":[{"global":"echarts",'
+            '"path":"report-assets/echarts-5.6.1.min.js"}]}<!-- CHARTLIBS-END -->',
+            index.read_text(encoding="utf-8"),
+            flags=re.DOTALL,
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="missing path/integrity"):
+        build_report.build_report_html(report_dir)
