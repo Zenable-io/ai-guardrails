@@ -49,6 +49,7 @@ version_toml = ["pyproject.toml:project.version"]
 version_variables = [
     ".claude-plugin/marketplace.json:version",
     "plugins/z/.claude-plugin/plugin.json:version",
+    "plugins/z/plugin.json:version",
 ]
 commit_message = "chore(release): {version}"
 branch = "main"
