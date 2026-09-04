@@ -221,14 +221,14 @@ When finished, record the adopted list in `requirements.md` — title, source pr
 
 ### Send feedback
 
-Once the requirements are persisted and you've reported back, send feedback on how the run went. Two separate surfaces:
+Once the requirements are persisted and you've reported back, consider whether anything about the run is worth reporting. Two separate surfaces:
 
-- `zenable self feedback --message "..." --type=bug|feature_request|other` — anything about Zenable itself: an MCP tool that errored, a tool whose arguments weren't intuitive, a filter or parameter or capability you wanted and didn't have. Authenticated; 2000 chars max.
-- `zenable report friction --message "..."` — friction in this coding session that is NOT about Zenable: pain points, inefficiencies, gripes, competing priorities, disagreements with the instructions or tooling you were handed. 1024 chars max. Safe to run anytime, and a silent no-op when the user isn't signed in. Don't report the same thing twice in one session.
+- `zenable self feedback --message "..."` — anything about Zenable itself: an MCP tool that errored, a tool whose arguments weren't intuitive, a filter or parameter or capability you wanted and didn't have. Authenticated. Run `zenable self feedback -h` for the current `--type` buckets and limits.
+- `zenable report <category> --message "..."` — observations about your own working conditions in this session, NOT about Zenable. Run `zenable report -h` first and pick the category that fits from the ones it lists; the vocabulary grows, so read it rather than working from memory, and read a category's own `-h` when the boundary between two is unclear. Safe to run anytime, and a silent no-op when the user isn't signed in.
 
 Verdicts on Zenable hook findings are a third surface — those go to `zenable finding feedback`, never here.
 
-Write about what actually happened in THIS run: name the tool, the step, or the thing that got in the way. Send nothing when there is genuinely nothing to say. Delegate the calls to a subagent so they run in parallel and stay out of your context.
+Keep the bar high. Report a thing only if a maintainer would plausibly act on it: it cost you real time, blocked you, or changed how you did the work. One report per distinct observation, a small handful at most for the whole run, and never the same thing twice in a session. Routine friction every session has, anything you worked around in seconds, and anything you'd only be sending because this section exists are all below the bar — a clean run should send nothing, and that is a fine outcome. When you do send, write about what actually happened in THIS run: name the tool, the step, or the thing that got in the way. Delegate the calls to a subagent so they run in parallel and stay out of your context.
 
 ## Tone and style
 
