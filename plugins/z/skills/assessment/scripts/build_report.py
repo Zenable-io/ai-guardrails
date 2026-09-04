@@ -195,6 +195,61 @@ def derive_meta(data_js_text: str) -> dict[str, object]:
     }
 
 
+# F-NNN / S-NNN / REC-NN / AP-N are DERIVED at render time from each item's
+# stable `key` — findings renumber by severity then impact x likelihood. A
+# literal typed into prose or into the mermaid source therefore points at a
+# SLOT, not at an item: add a finding, rescore one, and the literal silently
+# starts naming something else. Nothing downstream can distinguish a stale
+# literal from a correct one, so refuse to build the bundle and make the author
+# use the `[[key]]` cross-ref, which follows the renumbering.
+_LITERAL_DISPLAY_ID_RE = re.compile(r"\b(?:F-\d{3}|S-\d{3}|REC-\d{2}|AP-\d+)\b")
+
+
+def validate_display_ids(data_js_text: str) -> None:
+    hits = sorted(set(_LITERAL_DISPLAY_ID_RE.findall(data_js_text)))
+    if not hits:
+        return
+    raise RuntimeError(
+        "data.js hardcodes derived display ids: "
+        + ", ".join(hits)
+        + ". These do not survive renumbering (findings are ordered by severity "
+        "then impact x likelihood at render time). Replace each with the "
+        "[[key]] cross-ref of the item it points at — in prose, in the mermaid "
+        "diagram source, and in attack-path steps."
+    )
+
+
+# The chart libraries are the only remote resource a report loads, and the
+# report can no longer name a version by itself — fetch_chart_libs.py resolves
+# one from the app and writes it into this block. An unresolved block means the
+# deliverable would ship with no risk matrix, no data-flow diagram and no
+# repository-history charts. That is a broken report, not a degraded one, and it
+# is invisible until a reader opens it, so refuse to build.
+_CHART_LIBS_BLOCK_RE = re.compile(
+    r"<!--\s*CHARTLIBS-BEGIN\s*-->(.*?)<!--\s*CHARTLIBS-END\s*-->", re.DOTALL
+)
+
+
+def validate_chart_libs(html: str) -> None:
+    match = _CHART_LIBS_BLOCK_RE.search(html)
+    if not match:
+        raise RuntimeError(
+            "index.html has no CHARTLIBS block; the report template is missing "
+            "the chart-libs-data script tag"
+        )
+    raw = match.group(1).strip()
+    libs = (json.loads(raw) or {}).get("libs") if raw and raw != "null" else None
+    if not libs:
+        raise RuntimeError(
+            "chart libraries are not resolved: run scripts/fetch_chart_libs.py "
+            "--report-dir <workspace>/report before building. Without it the "
+            "report ships with no charts and no diagram."
+        )
+    for lib in libs:
+        if not lib.get("integrity") or not lib.get("path"):
+            raise RuntimeError(f"chart library entry is missing path/integrity: {lib!r}")
+
+
 def _script_safe(js: str) -> str:
     return re.sub(r"</(script)", r"<\/\1", js, flags=re.IGNORECASE)
 
@@ -239,6 +294,7 @@ def build_report_html(report_dir: Path, asset_subdomain: str = "") -> str:
             raise RuntimeError(f"missing required report input: {required}")
 
     html = index_html.read_text(encoding="utf-8")
+    validate_chart_libs(html)
     html = re.sub(
         r"[ \t]*<link\b[^>]*href=[\"']https?://[^\"']+[\"'][^>]*>\s*\n?",
         "",
@@ -341,6 +397,7 @@ def build_bundle(
     asset_subdomain: str = "",
 ) -> dict[str, object]:
     data_js_text = (report_dir / "data.js").read_text(encoding="utf-8")
+    validate_display_ids(data_js_text)
     meta = derive_meta(data_js_text)
     report_html = build_report_html(report_dir, asset_subdomain=asset_subdomain)
 

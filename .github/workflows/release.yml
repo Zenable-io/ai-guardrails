@@ -6,10 +6,20 @@ permissions:
   id-token: write
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      force:
+        description: >-
+          Force a specific bump instead of deriving it from the commits since
+          the last release. Use when the commit history under-represents the
+          change (or to cut a sync release after a process fix).
+        type: choice
+        default: auto
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 defaults:
   run:
@@ -24,14 +34,22 @@ jobs:
     name: Semantic Release
     runs-on: ubuntu-24.04
     concurrency: release
-    # Only run on non-release commits to avoid loops
-    if: "!contains(github.event.head_commit.message, 'chore(release):')"
     steps:
+      # Pushes to main must authenticate as the internal release app so the main
+      # ruleset's bypass applies; GITHUB_TOKEN authenticates as
+      # github-actions[bot], which the ruleset rejects.
+      - name: Mint a release app token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - name: Checkout the repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -51,24 +69,55 @@ jobs:
       - name: Run the Release
         id: release
         env:
-          # semantic-release reads GH_TOKEN for the tag push and the release API.
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # semantic-release reads GH_TOKEN for the commit/tag push and the
+          # release API. This must stay the app token, not GITHUB_TOKEN — see
+          # the checkout step.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          FORCE: ${{ inputs.force || 'auto' }}
+          # semantic-release authors its commit as "semantic-release
+          # <semantic-release>" unless overridden here — it does not read
+          # git config for this.
+          GIT_COMMIT_AUTHOR: "Zenable Automation <automation@zenable.io>"
         run: |
           git config user.name "Zenable Automation"
           git config user.email "automation@zenable.io"
 
+          force_args=()
+          [[ "$FORCE" != "auto" ]] && force_args=("--$FORCE")
+
           # `version --print` reports what a release would produce, or the current
           # version when nothing warrants a bump — so matching the last released
-          # version means this push releases nothing. Both commands are read-only.
-          version="$(semantic-release version --print)"
+          # version means this dispatch releases nothing. Both commands are read-only.
+          version="$(semantic-release version --print "${force_args[@]}")"
           if [[ "$version" == "$(semantic-release version --print-last-released)" ]]; then
             echo "released=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          # Tag-only: --no-commit leaves main untouched (the push is a no-op the
-          # branch ruleset ignores) while the tag still pushes and cuts the release.
-          semantic-release -v version --no-commit --tag --push --vcs-release
+          # Idempotency guard: the computed tag must not already exist on the
+          # remote. If it does and it points at HEAD, a previous run already
+          # released this exact state — skip quietly (a replayed dispatch is
+          # not an error). If it points anywhere else, the remote and our
+          # computation disagree — fail loudly rather than clobber or
+          # double-release. The last ls-remote line is the peeled commit when
+          # the tag is annotated, so the HEAD comparison works either way.
+          existing="$(git ls-remote origin "refs/tags/v${version}" | awk '{sha=$1} END {print sha}')"
+          if [[ -n "$existing" ]]; then
+            if [[ "$existing" == "$(git rev-parse HEAD)" ]]; then
+              echo "Tag v${version} already exists on origin at HEAD; nothing to do."
+              echo "released=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            echo "::error::Tag v${version} already exists on origin at ${existing}, which is not HEAD; refusing to release."
+            exit 1
+          fi
+
+          # Writes the new version into the manifests (version_toml/version_variables
+          # in pyproject.toml), commits them with the changelog, pushes the commit to
+          # main, tags that commit, and cuts the GitHub release — so the released tag
+          # always points at a commit whose manifests carry the released version.
+          # The push authenticates as the release app (see the checkout step).
+          semantic-release -v version --commit --tag --push --vcs-release "${force_args[@]}"
 
           # Only a prerelease carries a `-suffix`.
           [[ "$version" == *-* ]] && prerelease=true || prerelease=false
@@ -96,7 +145,7 @@ jobs:
           echo "**Version:** ${{ steps.release.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "**Tag:** ${{ steps.release.outputs.tag }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "The release has been created and tagged." >> $GITHUB_STEP_SUMMARY
+          echo "The release commit has been pushed to main, tagged, and released." >> $GITHUB_STEP_SUMMARY
 
       - name: No release
         if: steps.release.outputs.released == 'false'
@@ -104,5 +153,7 @@ jobs:
           echo "### ℹ️ No Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "No new version was released. This is normal if:" >> $GITHUB_STEP_SUMMARY
-          echo "- No conventional commits since last release" >> $GITHUB_STEP_SUMMARY
-          echo "- Only chore/docs commits (which don't trigger releases)" >> $GITHUB_STEP_SUMMARY
+          echo "- No conventional commits since the last release warrant a bump" >> $GITHUB_STEP_SUMMARY
+          echo "- Only chore/docs commits landed (which don't trigger releases)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Re-run with the \`force\` input set to cut one anyway." >> $GITHUB_STEP_SUMMARY

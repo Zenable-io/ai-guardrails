@@ -478,6 +478,25 @@ main { max-width: 1480px; margin: 0 auto; padding: 16px 56px 48px; }
   font-size: 13px; color: var(--z-ink); margin-bottom: 4px; line-height: 1.5;
 }
 
+/* GFM pipe tables authored inside prose (findings, attack paths, custom
+   requirements). Scrolls inside its own wrapper so a wide evidence table never
+   forces the page itself to scroll sideways. */
+.prose-table-wrap { overflow-x: auto; margin: 0 0 12px; }
+.prose-table {
+  width: 100%; border-collapse: collapse; font-size: 12.5px;
+  color: var(--z-ink); line-height: 1.5;
+}
+.prose-table th, .prose-table td {
+  border: 1px solid var(--z-rule); padding: 5px 9px;
+  text-align: left; vertical-align: top;
+}
+.prose-table th {
+  background: var(--z-paper-2); font-weight: 700; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .06em; color: var(--z-mute);
+  white-space: nowrap;
+}
+.prose-table code { white-space: normal; word-break: break-word; }
+
 /* Section subheadings inside a finding's prose (Finding / Confirmed Mitigations /
    Risk / Recommendation / Terminology …). More specific than `.finding-body h4`
    so it reads as a real subheading, not the tiny uppercase Evidence/References label. */
@@ -500,31 +519,6 @@ main { max-width: 1480px; margin: 0 auto; padding: 16px 56px 48px; }
 .finding-collapse > summary::-webkit-details-marker { display: none; }
 .finding-collapse > summary::before { content: "\25B8  "; color: var(--z-mute); }
 .finding-collapse[open] > summary::before { content: "\25BE  "; }
-
-/* Tokenization Logic Review — the four mandatory questions, each pass/warn/fail. */
-.tokenization-list { display: grid; gap: 14px; }
-.token-section {
-  border: 1px solid var(--z-rule); border-left: 4px solid var(--z-rule);
-  border-radius: 10px; padding: 14px 16px; background: var(--z-paper-2);
-}
-.token-section[data-status="true"] { border-left-color: var(--z-teal); }
-.token-section[data-status="warn"] { border-left-color: #C28F12; }
-.token-section[data-status="false"] { border-left-color: #B12B2B; }
-.token-head { display: flex; align-items: center; gap: 10px; }
-.token-status { font-size: 16px; line-height: 1; }
-.token-title { flex: 1; font-weight: 700; font-size: 14.5px; color: var(--z-ink); }
-.token-verdict {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: .1em; color: var(--z-mute);
-}
-.token-question {
-  margin: 8px 0 6px; font-style: italic; color: var(--z-mute); font-size: 13px;
-}
-.token-finding { font-size: 13.5px; color: var(--z-ink-mute); line-height: 1.6; }
-.token-note {
-  margin-top: 8px; font-size: 12.5px; color: var(--z-ink-mute);
-  border-left: 2px solid var(--z-rule-soft); padding-left: 10px;
-}
 
 /* Footnote refs in prose + the per-card references list */
 .fn-ref {
@@ -597,8 +591,14 @@ main { max-width: 1480px; margin: 0 auto; padding: 16px 56px 48px; }
 .cve-body dl { display: grid; grid-template-columns: 140px 1fr; gap: 2px 12px; }
 .cve-body dt { padding-top: 2px; }
 
-/* ============================================================ Tokenization */
-.tokenization-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* ==================================================== Custom Requirements */
+/* auto-fit, not a fixed `1fr 1fr`: the card count comes from
+   customRequirements.sections, and an engagement with a single requirement
+   would otherwise render that card at half width with dead space beside it.
+   auto-fit collapses the empty track so a lone card fills the row. */
+.tokenization-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 10px;
+}
 .tok-card {
   border: 1px solid var(--z-rule); border-radius: var(--radius-card);
   background: var(--z-paper); padding: 14px;
@@ -1067,7 +1067,7 @@ main { max-width: 1480px; margin: 0 auto; padding: 16px 56px 48px; }
 
   /* Evidence disclosures are the reference backing, not part of the printed/PDF
      report — drop them everywhere (findings, trust boundary, attack paths,
-     tokenization). The per-card "References" footnote lists are intentionally
+     custom requirements). The per-card "References" footnote lists are intentionally
      KEPT (see the .fn-list rule above). */
   .finding-evidence,
   .trust-evidence,
@@ -1103,6 +1103,11 @@ main { max-width: 1480px; margin: 0 auto; padding: 16px 56px 48px; }
   .authors-table-wrap { max-height: none !important; overflow: visible !important; }
   .authors-table th { position: static !important; }
   .authors-table tr { page-break-inside: avoid; break-inside: avoid; }
+  /* Print has no scrollbars, so a prose table must wrap instead of overflow. */
+  .prose-table-wrap { overflow-x: visible !important; }
+  .prose-table { table-layout: fixed; }
+  .prose-table th, .prose-table td { word-break: break-word; white-space: normal; }
+  .prose-table tr { page-break-inside: avoid; break-inside: avoid; }
 
   a, a:visited { color: var(--z-blue); border-bottom: 0; }
 }
