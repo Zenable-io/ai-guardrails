@@ -21,7 +21,7 @@ repos:
      - id: shellcheck
        args: [ -x, --source-path=SCRIPTDIR ]
  - repo: https://github.com/trufflesecurity/trufflehog
-   rev: 363923b901c911a9164f50b6c423f47c15372b1c  # frozen: v3.97.4
+   rev: f714bf454f350590f4a24c3ddb1aef02c35bf5b6  # frozen: v3.97.5
    hooks:
      - id: trufflehog
        # Check the past 2 commits; it's useful to make this go further back than main when running this where main and HEAD are equal
