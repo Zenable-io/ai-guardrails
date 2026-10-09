@@ -1,7 +1,7 @@
 {
   "name": "zenable",
   "interface": {
-    "displayName": "Zenable AI Guardrails"
+    "displayName": "Zenable Skills"
   },
   "plugins": [
     {

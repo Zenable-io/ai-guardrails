@@ -68,7 +68,7 @@ def page(nodes: list[dict], *, end_cursor: str | None = None, serves_cursor: str
 
 
 def run(script: Path, args: list[str], pages: list[dict], *, owner: str = "Zenable-io",
-        name: str = "ai-guardrails", mutation: dict | None = None) -> tuple[int, str, str, list[dict]]:
+        name: str = "skills", mutation: dict | None = None) -> tuple[int, str, str, list[dict]]:
     """Run a script with `gh` stubbed out; return rc, stdout, stderr, and the call log."""
     with tempfile.TemporaryDirectory() as workspace:
         work = Path(workspace)

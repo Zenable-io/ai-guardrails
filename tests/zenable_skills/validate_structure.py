@@ -409,7 +409,7 @@ def main() -> int:
     print(f"Plugin structure validation passed! Portable skills: {skill_count}")
     print()
     print("Claude Code:")
-    print("  /plugin marketplace add Zenable-io/ai-guardrails")
+    print("  /plugin marketplace add Zenable-io/skills")
     print("  /plugin install z@zenable")
     print("Agent Plugins 1.0 clients:")
     print("  install the `zenable` plugin from this repository")

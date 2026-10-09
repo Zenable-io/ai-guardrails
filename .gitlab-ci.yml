@@ -1,5 +1,5 @@
 ---
-# GitLab CI for the zenable/ai-guardrails CI/CD component catalog project.
+# GitLab CI for the zenable/skills CI/CD component catalog project.
 #
 # This pipeline only runs on GitLab.com — the GitHub repo is the canonical
 # source of truth (see CONTRIBUTING.md). When a `v*` tag is mirrored to the
@@ -29,6 +29,6 @@ release:
   release:
     tag_name: $CI_COMMIT_TAG
     description: |
-      Zenable AI Guardrails — GitLab CI/CD component release $CI_COMMIT_TAG.
-      See https://github.com/Zenable-io/ai-guardrails/releases/tag/$CI_COMMIT_TAG
+      Zenable Skills — GitLab CI/CD component release $CI_COMMIT_TAG.
+      See https://github.com/Zenable-io/skills/releases/tag/$CI_COMMIT_TAG
       for the full changelog.
