@@ -230,6 +230,5 @@ or run by hand. `task lint` runs the same git hooks CI runs.
 ## Questions?
 
 - **Issues**: [GitHub Issues](https://github.com/Zenable-io/skills/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Zenable-io/skills/discussions)
 - **Website**: [zenable.io](https://zenable.io)
 - **Docs**: [docs.zenable.io](https://docs.zenable.io)
