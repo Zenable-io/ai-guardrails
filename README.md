@@ -159,7 +159,7 @@ Then add the hook to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Zenable-io/skills
-    rev: v2
+    rev: v3
     hooks:
       - id: zenable-check
 ```
@@ -185,7 +185,7 @@ Pin to a specific release for reproducibility:
 
 ```yaml
 include:
-  - component: gitlab.com/zenable/skills/check@1.0.0
+  - component: gitlab.com/zenable/skills/check@3.0.0
 ```
 
 SARIF output is uploaded as a GitLab SAST report. See the
