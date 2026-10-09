@@ -12,9 +12,9 @@ agent looked.
 
 This repository is the home for Zenable's developer-side integrations: the agent
 plugin — which ships as both a Claude Code plugin and a portable
-[Agent Plugins 1.0](https://agent-plugins.org/) package — a GitLab CI/CD
-component, a pre-commit hook, and drop-in configuration for plenty of different
-agentic IDE. Your requirements travel with you across all of them.
+[Agent Plugins 1.0](https://agent-plugins.org/) package — plus a pre-commit hook
+and drop-in configuration for plenty of different agentic IDEs.
+Your requirements travel with you across all of them.
 
 > **This README is the quick, self-contained tour.** Full product documentation
 > lives at **[zenable.app/docs](https://www.zenable.app/docs)** — each section
@@ -166,34 +166,6 @@ repos:
 
 Deep dive: [Pre-commit setup](https://www.zenable.app/docs/integrations/pre-commit/getting-started)
 
-### GitLab CI/CD component
-
-Run guardrail checks on every GitLab pipeline. Authenticates to Zenable via
-GitLab's native OIDC ID tokens — no long-lived secrets required.
-
-```yaml
-# .gitlab-ci.yml
-include:
-  - component: gitlab.com/zenable/skills/check@~latest
-    inputs:
-      paths: ""              # empty = check files changed on this branch
-      base_branch: main
-      format: "text,sarif=zenable.sarif"
-```
-
-Pin to a specific release for reproducibility:
-
-```yaml
-include:
-  - component: gitlab.com/zenable/skills/check@3.0.0
-```
-
-SARIF output is uploaded as a GitLab SAST report. See the
-[GitLab CI/CD Catalog](https://gitlab.com/explore/catalog/zenable/skills)
-for the full input reference, or wire up the
-[GitLab merge-request reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/gitlab)
-for automated review comments on every MR.
-
 ## Documentation
 
 Everything below redirects to [docs.zenable.io](https://docs.zenable.io):
@@ -219,5 +191,4 @@ and automated semantic versioning.
 ## Support
 
 - **Issues:** [GitHub Issues](https://github.com/Zenable-io/skills/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Zenable-io/skills/discussions)
 - **Website:** [zenable.io](https://zenable.io)
