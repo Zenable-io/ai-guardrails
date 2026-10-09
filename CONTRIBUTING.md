@@ -124,7 +124,8 @@ skills/
 ├── tests/
 │   └── zenable_skills/
 │       ├── schemas/              # Vendored upstream Agent Plugins schema
-│       └── validate_structure.py # Validates both formats + drift
+│       ├── validate_structure.py # Validates both formats + drift
+│       └── validate_skills_cli.py # Confirms `npx skills` finds every skill
 ├── pyproject.toml                # Project config + semantic-release
 ├── Taskfile.yml                  # Task automation
 └── README.md

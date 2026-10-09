@@ -108,6 +108,22 @@ that implement the spec load the identical eleven skills with no Zenable-specifi
 glue. Install it through the client's own plugin flow, adding
 `Zenable-io/skills` as a marketplace and then installing `z@zenable`.
 
+### Skills CLI
+
+To drop just the skills into any agent the
+[`skills` CLI](https://github.com/vercel-labs/skills) supports — Claude Code,
+Cursor, Codex, OpenCode, and dozens more — point it at this repo:
+
+```bash
+npx skills add Zenable-io/skills                    # pick skills and agents interactively
+npx skills add Zenable-io/skills --skill triage     # install one skill
+npx skills add Zenable-io/skills --list             # see what's available
+```
+
+Skills installed this way are invoked by their bare name (`/triage` rather than
+`/z:triage`) and don't include the plugin's post-edit hooks — use the plugin, or
+`zenable install`, for automatic review on every edit.
+
 ### Other AI editors
 
 The same guardrails — remote MCP plus an automatic post-edit review — work
