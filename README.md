@@ -1,4 +1,4 @@
-# Zenable AI Guardrails
+# Zenable Skills
 
 Zenable enforces your organization's coding standards — the requirements your
 team decided on — against the code AI agents write, as they write it. Teams
@@ -12,9 +12,9 @@ agent looked.
 
 This repository is the home for Zenable's developer-side integrations: the agent
 plugin — which ships as both a Claude Code plugin and a portable
-[Agent Plugins 1.0](https://agent-plugins.org/) package — a GitLab CI/CD
-component, a pre-commit hook, and drop-in configuration for plenty of different
-agentic IDE. Your requirements travel with you across all of them.
+[Agent Plugins 1.0](https://agent-plugins.org/) package — plus a pre-commit hook
+and drop-in configuration for plenty of different agentic IDEs.
+Your requirements travel with you across all of them.
 
 > **This README is the quick, self-contained tour.** Full product documentation
 > lives at **[zenable.app/docs](https://www.zenable.app/docs)** — each section
@@ -56,7 +56,7 @@ reconfigure when your team adopts a new tool.
 Install the plugin from this repo's marketplace:
 
 ```bash
-/plugin marketplace add Zenable-io/ai-guardrails
+/plugin marketplace add Zenable-io/skills
 /plugin install z@zenable
 ```
 
@@ -66,7 +66,7 @@ Install the plugin from this repo's marketplace:
 {
   "extraKnownMarketplaces": {
     "zenable": {
-      "source": {"source": "github", "repo": "Zenable-io/ai-guardrails"}
+      "source": {"source": "github", "repo": "Zenable-io/skills"}
     }
   },
   "enabledPlugins": {"z@zenable": true}
@@ -79,7 +79,7 @@ edit with nothing else to configure. What you get:
 
 - **Hooks** — automatic guardrail review after each file edit. Violations are
   returned to the agent to fix in place.
-- **Skills** — eleven of them, all invocable as `/z:<name>`. **`/z:guardrails-reviewer`**
+- **Skills** — eleven of them, all invocable as `/z:<name>`. **`/z:review`**
   for autonomous, requirement-aware code review; **`/z:setup`** to onboard a
   codebase by turning the standards you've already written down into scoped
   Zenable requirements; **`/z:assessment`** to run a full assessment on top of
@@ -104,9 +104,25 @@ Deep dive: [Claude Code integration](https://www.zenable.app/docs/integrations/m
 
 The same package is also a portable
 [Agent Plugins 1.0](https://agent-plugins.org/specification) plugin, so clients
-that implement the spec load the identical ten skills with no Zenable-specific
+that implement the spec load the identical eleven skills with no Zenable-specific
 glue. Install it through the client's own plugin flow, adding
-`Zenable-io/ai-guardrails` as a marketplace and then installing `z@zenable`.
+`Zenable-io/skills` as a marketplace and then installing `z@zenable`.
+
+### Skills CLI
+
+To drop just the skills into any agent the
+[`skills` CLI](https://github.com/vercel-labs/skills) supports — Claude Code,
+Cursor, Codex, OpenCode, and dozens more — point it at this repo:
+
+```bash
+npx skills add Zenable-io/skills                    # pick skills and agents interactively
+npx skills add Zenable-io/skills --skill triage     # install one skill
+npx skills add Zenable-io/skills --list             # see what's available
+```
+
+Skills installed this way are invoked by their bare name (`/triage` rather than
+`/z:triage`) and don't include the plugin's post-edit hooks — use the plugin, or
+`zenable install`, for automatic review on every edit.
 
 ### Other AI editors
 
@@ -142,41 +158,13 @@ Then add the hook to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: https://github.com/Zenable-io/ai-guardrails
-    rev: v2
+  - repo: https://github.com/Zenable-io/skills
+    rev: v3.0.0 # Consider `pre-commit autoupdate --freeze` to safely lock and maintain this
     hooks:
       - id: zenable-check
 ```
 
 Deep dive: [Pre-commit setup](https://www.zenable.app/docs/integrations/pre-commit/getting-started)
-
-### GitLab CI/CD component
-
-Run guardrail checks on every GitLab pipeline. Authenticates to Zenable via
-GitLab's native OIDC ID tokens — no long-lived secrets required.
-
-```yaml
-# .gitlab-ci.yml
-include:
-  - component: gitlab.com/zenable/ai-guardrails/check@~latest
-    inputs:
-      paths: ""              # empty = check files changed on this branch
-      base_branch: main
-      format: "text,sarif=zenable.sarif"
-```
-
-Pin to a specific release for reproducibility:
-
-```yaml
-include:
-  - component: gitlab.com/zenable/ai-guardrails/check@1.0.0
-```
-
-SARIF output is uploaded as a GitLab SAST report. See the
-[GitLab CI/CD Catalog](https://gitlab.com/explore/catalog/zenable/ai-guardrails)
-for the full input reference, or wire up the
-[GitLab merge-request reviewer](https://www.zenable.app/docs/integrations/vcs-reviewers/gitlab)
-for automated review comments on every MR.
 
 ## Documentation
 
@@ -202,6 +190,5 @@ and automated semantic versioning.
 
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/Zenable-io/ai-guardrails/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/Zenable-io/ai-guardrails/discussions)
+- **Issues:** [GitHub Issues](https://github.com/Zenable-io/skills/issues)
 - **Website:** [zenable.io](https://zenable.io)

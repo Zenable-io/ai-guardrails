@@ -1,7 +1,7 @@
 [project]
-name = "ai-guardrails"
-version = "2.4.3"
-description = "AI coding guardrails for Claude Code"
+name = "skills"
+version = "3.0.0"
+description = "Zenable skills and integrations for AI coding agents"
 authors = [
     { name = "Zenable", email = "support@zenable.io" }
 ]
@@ -13,7 +13,7 @@ requires-python = ">= 3.13"
 [project.urls]
 Homepage = "https://zenable.io"
 Documentation = "https://docs.zenable.io"
-Repository = "https://github.com/Zenable-io/ai-guardrails"
+Repository = "https://github.com/Zenable-io/skills"
 
 [tool.uv]
 managed = true

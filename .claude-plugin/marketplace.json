@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "z",
-      "version": "2.4.3",
+      "version": "3.0.0",
       "description": "Make your coding agents automatically self-improve. Enforce your coding standards while your developers keep using whatever IDE, model, or agent they want.",
       "source": "./plugins/z",
       "keywords": [
@@ -25,8 +25,8 @@
     }
   ],
   "metadata": {
-    "description": "Official Zenable AI Guardrails plugin marketplace for Claude Code",
-    "homepage": "https://docs.zenable.io?utm_source=ai-guardrails&utm_medium=marketplace",
-    "repository": "https://github.com/Zenable-io/ai-guardrails"
+    "description": "Official Zenable Skills plugin marketplace for Claude Code",
+    "homepage": "https://docs.zenable.io?utm_source=skills&utm_medium=marketplace",
+    "repository": "https://github.com/Zenable-io/skills"
   }
 }

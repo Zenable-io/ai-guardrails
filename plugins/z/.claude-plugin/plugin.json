@@ -1,6 +1,6 @@
 {
   "name": "z",
-  "version": "2.4.3",
+  "version": "3.0.0",
   "description": "Make your coding agents automatically self-improve. Enforce your coding standards while your developers keep using whatever IDE, model, or agent they want.",
   "keywords": [
     "zenable",
@@ -16,7 +16,7 @@
     "context engineering"
   ],
   "homepage": "https://docs.zenable.io",
-  "repository": "https://github.com/Zenable-io/ai-guardrails",
+  "repository": "https://github.com/Zenable-io/skills",
   "author": {
     "name": "Zenable",
     "url": "https://zenable.io"
