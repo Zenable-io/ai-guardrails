@@ -1,4 +1,4 @@
-# Contributing to Zenable AI Guardrails
+# Contributing to Zenable Skills
 
 Thank you for your interest in contributing! This document provides guidelines for contributing to the project.
 
@@ -6,8 +6,8 @@ Thank you for your interest in contributing! This document provides guidelines f
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/Zenable-io/ai-guardrails.git
-   cd ai-guardrails
+   git clone https://github.com/Zenable-io/skills.git
+   cd skills
    ```
 
 2. **Initialize the development environment**:
@@ -87,7 +87,7 @@ chore(deps): update pre-commit hooks
 ## Project Structure
 
 ```
-ai-guardrails/
+skills/
 ├── .claude-plugin/
 │   └── marketplace.json          # Marketplace catalog (Claude Code)
 ├── .agents/
@@ -115,16 +115,17 @@ ai-guardrails/
 │           │   ├── assets/       # HTML report template + workspace rules
 │           │   ├── references/   # Evidence-model tool reference
 │           │   └── scripts/      # Evidence transforms + bundle builder (+ tests)
-│           ├── guardrails-reviewer/
+│           ├── review/
 │           │   └── SKILL.md      # Autonomous conformance reviewer
 │           ├── setup/            # /z:setup onboarding
 │           ├── triage/           # /z:triage review-comment resolver
 │           └── …                 # feat, debug, addtests, doublecheck,
 │                                 # rebase, prfeedback, researchbranch
 ├── tests/
-│   └── zenable_guardrails/
+│   └── zenable_skills/
 │       ├── schemas/              # Vendored upstream Agent Plugins schema
-│       └── validate_structure.py # Validates both formats + drift
+│       ├── validate_structure.py # Validates both formats + drift
+│       └── validate_skills_cli.py # Confirms `npx skills` finds every skill
 ├── pyproject.toml                # Project config + semantic-release
 ├── Taskfile.yml                  # Task automation
 └── README.md
@@ -228,7 +229,7 @@ or run by hand. `task lint` runs the same git hooks CI runs.
 
 ## Questions?
 
-- **Issues**: [GitHub Issues](https://github.com/Zenable-io/ai-guardrails/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Zenable-io/ai-guardrails/discussions)
+- **Issues**: [GitHub Issues](https://github.com/Zenable-io/skills/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Zenable-io/skills/discussions)
 - **Website**: [zenable.io](https://zenable.io)
 - **Docs**: [docs.zenable.io](https://docs.zenable.io)

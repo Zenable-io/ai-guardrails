@@ -9,7 +9,7 @@ set:
   - pipefail
 
 vars:
-  PROJECT_NAME: ai-guardrails
+  PROJECT_NAME: skills
   RUN_SCRIPT: 'uv run --frozen'
 
 silent: true
@@ -96,11 +96,20 @@ tasks:
       - task: test-scripts
       - task: test-assessment-scripts
       - task: test-report-template
+      - task: test-skills-cli
 
   test-plugin:
     desc: Validate the z plugin structure
     cmds:
-      - '{{.RUN_SCRIPT}} python tests/zenable_guardrails/validate_structure.py'
+      - '{{.RUN_SCRIPT}} python tests/zenable_skills/validate_structure.py'
+
+  test-skills-cli:
+    desc: Confirm `npx skills` discovers every skill in this repo
+    preconditions:
+      - sh: which npx
+        msg: "npx (node 18+) is required to exercise the skills CLI"
+    cmds:
+      - '{{.RUN_SCRIPT}} python tests/zenable_skills/validate_skills_cli.py'
 
   test-scripts:
     desc: Exercise the prfeedback helper scripts against a stubbed gh
@@ -109,7 +118,7 @@ tasks:
       - sh: which jq
         msg: "jq is required to test the prfeedback scripts"
     cmds:
-      - '{{.RUN_SCRIPT}} python tests/zenable_guardrails/validate_scripts.py'
+      - '{{.RUN_SCRIPT}} python tests/zenable_skills/validate_scripts.py'
 
   test-assessment-scripts:
     desc: Test the assessment skill's report-generation tooling
