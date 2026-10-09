@@ -1,6 +1,7 @@
 ---
 name: setup
 description: Guided Zenable onboarding — discover the standards a codebase already has written down, mine them into candidate requirements, triage them with the user, and persist the survivors as scoped Zenable requirements through the Zenable MCP. Use this skill whenever the user wants to onboard a codebase onto Zenable, set up custom requirements/guardrails for a project, or invokes `/z:setup`. Also trigger for phrases like "onboard this repo to Zenable", "set up Zenable requirements for this codebase", or "get Zenable guardrails going here".
+allowed-tools: Bash(which zenable:*), Bash(zenable version:*), Bash(zenable auth can-i:*), Bash(zenable auth whoami:*), Bash(echo:*), Bash(git remote get-url:*)
 ---
 
 # Zenable setup
@@ -41,11 +42,29 @@ After install completes, re-run `zenable version` to confirm. Do not proceed unt
 the CLI is on PATH. If the user declines installation, stop and explain that this
 skill needs the CLI for durable Zenable requirements support.
 
-### Authentication
+### Sign-in and plan
+
+zenable access: !`zenable auth can-i get_findings 2>/dev/null; echo "exit code $?"`
+
+This one call confirms the user is signed in **and** their account has an active
+trial or paid plan: `get_findings` is a paid-plan tool, so the server answers `yes`
+only for trial and paid accounts. If your client didn't run the command above for
+you, run it yourself. Then act on the exit code:
+
+- **0** (`yes`) — ready; continue.
+- **21** — not signed in. Ask the user to run `zenable login` in a separate
+  terminal, then re-run the check.
+- **1** with `no` — signed in, but there's no active trial or paid plan. Stop and
+  point the user to https://www.zenable.io/pricing to start a trial or upgrade.
+- **1** with nothing else printed — the account isn't fully set up. Stop and ask
+  the user to sign in at https://www.zenable.app to finish setting it up.
+- **127** — the CLI isn't installed or isn't on `PATH`; go back to the install step.
+
+Do not continue until this check passes.
 
 zenable auth identity: !`zenable auth whoami 2>&1 || echo "NOT AUTHENTICATED"`
 
-If the above shows "NOT AUTHENTICATED" (or any error), ask the user to run `zenable login` in a separate terminal, then re-check. Do not proceed unauthenticated.
+Use the identity above when you tell the user what you found.
 
 ### Zenable MCP
 

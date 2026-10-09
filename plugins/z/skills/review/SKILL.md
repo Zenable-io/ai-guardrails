@@ -8,6 +8,45 @@ allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 
 A specialized capability for reviewing code changes against organizational standards as they're being made, and at key development milestones such as commits, pull requests, deployments, or during periodic reviews.
 
+## Pre-flight
+
+Run these checks before reviewing anything.
+
+### zenable CLI
+
+zenable CLI location: !`command -v zenable 2>/dev/null || echo "NOT INSTALLED"`
+
+If the above shows "NOT INSTALLED", ask the user for permission before installing
+anything on their machine. If they approve, install it with the canonical installer,
+which verifies the download (checksum + signature) before installing:
+
+```bash
+curl -fsSL https://cli.zenable.app/install.sh | bash
+```
+
+Then confirm `command -v zenable` resolves. If the user declines, stop and explain
+that this skill needs the CLI.
+
+### Sign-in and plan
+
+zenable access: !`zenable auth can-i get_findings 2>/dev/null; echo "exit code $?"`
+
+This one call confirms the user is signed in **and** their account has an active
+trial or paid plan: `get_findings` is a paid-plan tool, so the server answers `yes`
+only for trial and paid accounts. If your client didn't run the command above for
+you, run it yourself. Then act on the exit code:
+
+- **0** (`yes`) — ready; continue.
+- **21** — not signed in. Ask the user to run `zenable login` in a separate
+  terminal, then re-run the check.
+- **1** with `no` — signed in, but there's no active trial or paid plan. Stop and
+  point the user to https://www.zenable.io/pricing to start a trial or upgrade.
+- **1** with nothing else printed — the account isn't fully set up. Stop and ask
+  the user to sign in at https://www.zenable.app to finish setting it up.
+- **127** — the CLI isn't installed or isn't on `PATH`; go back to the install step.
+
+Do not continue until this check passes.
+
 ## Purpose
 
 This provides a hybrid review process combining:
@@ -61,6 +100,8 @@ When activated, follow this process:
    - Identify changed files (`git diff --name-only`, or user-specified)
    - Run `zenable check` against those files (or `zenable check --branch` for everything changed on the branch)
    - Parse the findings it reports (file:line, requirement attribution, enforcement mode)
+   - If it exits **23**, the user's tenant has no seat available for them: stop and tell them to ask a Zenable admin for a seat
+   - If it warns **INSUFFICIENT CREDITS**, some checks were skipped: say so in your results rather than reporting a clean pass
 3. **Apply LLM judgment**: Evaluate code against best practices and organizational standards
    - Review code quality, maintainability, security patterns
    - Consider architectural implications
