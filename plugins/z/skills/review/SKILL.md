@@ -34,18 +34,11 @@ zenable access: !`zenable auth can-i get_findings 2>/dev/null; echo "exit code $
 This one call confirms the user is signed in **and** their account has an active
 trial or paid plan: `get_findings` is a paid-plan tool, so the server answers `yes`
 only for trial and paid accounts. If your client didn't run the command above for
-you, run it yourself. Then act on the exit code:
+you, run it yourself.
 
-- **0** (`yes`) — ready; continue.
-- **21** — not signed in. Ask the user to run `zenable login` in a separate
-  terminal, then re-run the check.
-- **1** with `no` — signed in, but there's no active trial or paid plan. Stop and
-  point the user to https://www.zenable.io/pricing to start a trial or upgrade.
-- **1** with nothing else printed — the account isn't fully set up. Stop and ask
-  the user to sign in at https://www.zenable.app to finish setting it up.
-- **127** — the CLI isn't installed or isn't on `PATH`; go back to the install step.
-
-Do not continue until this check passes.
+Continue only on exit code 0. For any other code, look it up in the
+[Zenable CLI reference](https://docs.zenable.io/integrations/zenable/commands), tell the
+user what it means and how to fix it, and stop until the check passes.
 
 ## Purpose
 
@@ -100,7 +93,7 @@ When activated, follow this process:
    - Identify changed files (`git diff --name-only`, or user-specified)
    - Run `zenable check` against those files (or `zenable check --branch` for everything changed on the branch)
    - Parse the findings it reports (file:line, requirement attribution, enforcement mode)
-   - If it exits **23**, the user's tenant has no seat available for them: stop and tell them to ask a Zenable admin for a seat
+   - If it exits with anything other than 0 or 2 (findings), look the code up in the [Zenable CLI reference](https://docs.zenable.io/integrations/zenable/commands) and tell the user how to fix it
    - If it warns **INSUFFICIENT CREDITS**, some checks were skipped: say so in your results rather than reporting a clean pass
 3. **Apply LLM judgment**: Evaluate code against best practices and organizational standards
    - Review code quality, maintainability, security patterns
