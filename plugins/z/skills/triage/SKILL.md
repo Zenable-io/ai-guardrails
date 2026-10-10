@@ -14,28 +14,16 @@ This skill requires the Zenable CLI. Check whether it's installed:
 
 zenable CLI location: !`command -v zenable 2>/dev/null || echo "NOT INSTALLED"`
 
-If the above shows "NOT INSTALLED", install it by running this skill's bundled
-installer (idempotent — a no-op once the CLI is present). In Claude Code the variable
-below is substituted for you; in every other client it is unset, so fall back to the
-absolute path of the directory containing this SKILL.md, which you already know from
-loading it:
+If the above shows "NOT INSTALLED", ask the user for permission before
+installing anything on their machine. If they approve, get the current install
+command for their operating system from https://cli.zenable.app (there is one for
+macOS/Linux and one for Windows) and run it. Read it from the page each time rather
+than from memory: the page is the source of truth, and the installer it points to
+verifies the download (checksum + signature). The page fills in its commands with
+JavaScript, so if a rendered view of it shows no command, read the raw HTML.
 
-```bash
-INSTALLER="${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/install-zenable.sh"
-[ -f "$INSTALLER" ] || INSTALLER="<absolute path of this skill's directory>/scripts/install-zenable.sh"
-bash "$INSTALLER"
-```
-
-The script delegates to the canonical installer at
-[cli.zenable.app/install.sh](https://cli.zenable.app), which verifies the
-download (checksum + signature) before installing. It needs `curl` or `wget`.
-If you'd rather install manually, run:
-
-```bash
-curl -fsSL https://cli.zenable.app/install.sh | bash
-```
-
-After installing, confirm `command -v zenable` resolves before continuing.
+After installing, confirm `command -v zenable` resolves. If the user declines, stop
+and explain that this skill needs the CLI.
 
 ### Sign-in and plan
 

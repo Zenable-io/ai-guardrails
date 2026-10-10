@@ -32,11 +32,12 @@ zenable CLI location: !`which zenable 2>/dev/null || echo "NOT INSTALLED"`
 zenable CLI version: !`zenable version 2>/dev/null || echo "unavailable"`
 
 If the location above shows "NOT INSTALLED", ask the user for permission before
-installing anything on their machine. If they approve, install it:
-
-```bash
-bash <skill-path>/scripts/install-zenable.sh
-```
+installing anything on their machine. If they approve, get the current install
+command for their operating system from https://cli.zenable.app (there is one for
+macOS/Linux and one for Windows) and run it. Read it from the page each time rather
+than from memory: the page is the source of truth, and the installer it points to
+verifies the download (checksum + signature). The page fills in its commands with
+JavaScript, so if a rendered view of it shows no command, read the raw HTML.
 
 After install completes, re-run `zenable version` to confirm. Do not proceed until
 the CLI is on PATH. If the user declines installation, stop and explain that this
@@ -258,7 +259,3 @@ Keep the bar high. Report a thing only if a maintainer would plausibly act on it
 - Be expert but understandable. Professional, approachable, practical.
 - Be concise without being curt. Use bullets when they make a choice easier; use prose when it reads better.
 - Watch for fatigue. This runs in one sitting, and every decision you ask for spends a budget that runs out.
-
-## Bundled resources
-
-- `scripts/install-zenable.sh` — installs the `zenable` CLI when it's missing (only run with explicit user permission).
