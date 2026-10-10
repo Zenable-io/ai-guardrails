@@ -14,28 +14,29 @@ This skill requires the Zenable CLI. Check whether it's installed:
 
 zenable CLI location: !`command -v zenable 2>/dev/null || echo "NOT INSTALLED"`
 
-If the above shows "NOT INSTALLED", install it by running this skill's bundled
-installer (idempotent — a no-op once the CLI is present). In Claude Code the variable
-below is substituted for you; in every other client it is unset, so fall back to the
-absolute path of the directory containing this SKILL.md, which you already know from
-loading it:
+If the above shows "NOT INSTALLED", ask the user for permission before
+installing anything on their machine. If they approve, get the current install
+command for their operating system from https://cli.zenable.app (there is one for
+macOS/Linux and one for Windows) and run it. Read it from the page each time rather
+than from memory: the page is the source of truth, and the installer it points to
+verifies the download (checksum + signature). The page fills in its commands with
+JavaScript, so if a rendered view of it shows no command, read the raw HTML.
 
-```bash
-INSTALLER="${CLAUDE_PLUGIN_ROOT}/skills/triage/scripts/install-zenable.sh"
-[ -f "$INSTALLER" ] || INSTALLER="<absolute path of this skill's directory>/scripts/install-zenable.sh"
-bash "$INSTALLER"
-```
+After installing, confirm `command -v zenable` resolves. If the user declines, stop
+and explain that this skill needs the CLI.
 
-The script delegates to the canonical installer at
-[cli.zenable.app/install.sh](https://cli.zenable.app), which verifies the
-download (checksum + signature) before installing. It needs `curl` or `wget`.
-If you'd rather install manually, run:
+### Sign-in and plan
 
-```bash
-curl -fsSL https://cli.zenable.app/install.sh | bash
-```
+zenable access: !`zenable auth can-i get_findings 2>/dev/null; echo "exit code $?"`
 
-After installing, confirm `command -v zenable` resolves before continuing.
+This one call confirms the user is signed in **and** their account has an active
+trial or paid plan: `get_findings` is a paid-plan tool, so the server answers `yes`
+only for trial and paid accounts. If your client didn't run the command above for
+you, run it yourself.
+
+Continue only on exit code 0. For any other code, look it up in the
+[Zenable CLI reference](https://docs.zenable.io/integrations/zenable/commands), tell the
+user what it means and how to fix it, and stop until the check passes.
 
 ## Instructions
 

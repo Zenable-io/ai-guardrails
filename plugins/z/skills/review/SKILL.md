@@ -8,6 +8,38 @@ allowed-tools: Read, Edit, Write, Bash, Grep, Glob
 
 A specialized capability for reviewing code changes against organizational standards as they're being made, and at key development milestones such as commits, pull requests, deployments, or during periodic reviews.
 
+## Pre-flight
+
+Run these checks before reviewing anything.
+
+### zenable CLI
+
+zenable CLI location: !`command -v zenable 2>/dev/null || echo "NOT INSTALLED"`
+
+If the above shows "NOT INSTALLED", ask the user for permission before
+installing anything on their machine. If they approve, get the current install
+command for their operating system from https://cli.zenable.app (there is one for
+macOS/Linux and one for Windows) and run it. Read it from the page each time rather
+than from memory: the page is the source of truth, and the installer it points to
+verifies the download (checksum + signature). The page fills in its commands with
+JavaScript, so if a rendered view of it shows no command, read the raw HTML.
+
+Then confirm `command -v zenable` resolves. If the user declines, stop and explain
+that this skill needs the CLI.
+
+### Sign-in and plan
+
+zenable access: !`zenable auth can-i get_findings 2>/dev/null; echo "exit code $?"`
+
+This one call confirms the user is signed in **and** their account has an active
+trial or paid plan: `get_findings` is a paid-plan tool, so the server answers `yes`
+only for trial and paid accounts. If your client didn't run the command above for
+you, run it yourself.
+
+Continue only on exit code 0. For any other code, look it up in the
+[Zenable CLI reference](https://docs.zenable.io/integrations/zenable/commands), tell the
+user what it means and how to fix it, and stop until the check passes.
+
 ## Purpose
 
 This provides a hybrid review process combining:
@@ -61,6 +93,8 @@ When activated, follow this process:
    - Identify changed files (`git diff --name-only`, or user-specified)
    - Run `zenable check` against those files (or `zenable check --branch` for everything changed on the branch)
    - Parse the findings it reports (file:line, requirement attribution, enforcement mode)
+   - If it exits with anything other than 0 or 2 (findings), look the code up in the [Zenable CLI reference](https://docs.zenable.io/integrations/zenable/commands) and tell the user how to fix it
+   - If it warns **INSUFFICIENT CREDITS**, some checks were skipped: say so in your results rather than reporting a clean pass
 3. **Apply LLM judgment**: Evaluate code against best practices and organizational standards
    - Review code quality, maintainability, security patterns
    - Consider architectural implications

@@ -1,6 +1,7 @@
 ---
 name: setup
 description: Guided Zenable onboarding — discover the standards a codebase already has written down, mine them into candidate requirements, triage them with the user, and persist the survivors as scoped Zenable requirements through the Zenable MCP. Use this skill whenever the user wants to onboard a codebase onto Zenable, set up custom requirements/guardrails for a project, or invokes `/z:setup`. Also trigger for phrases like "onboard this repo to Zenable", "set up Zenable requirements for this codebase", or "get Zenable guardrails going here".
+allowed-tools: Bash(which zenable:*), Bash(zenable version:*), Bash(zenable auth can-i:*), Bash(zenable auth whoami:*), Bash(echo:*), Bash(git remote get-url:*)
 ---
 
 # Zenable setup
@@ -31,21 +32,33 @@ zenable CLI location: !`which zenable 2>/dev/null || echo "NOT INSTALLED"`
 zenable CLI version: !`zenable version 2>/dev/null || echo "unavailable"`
 
 If the location above shows "NOT INSTALLED", ask the user for permission before
-installing anything on their machine. If they approve, install it:
-
-```bash
-bash <skill-path>/scripts/install-zenable.sh
-```
+installing anything on their machine. If they approve, get the current install
+command for their operating system from https://cli.zenable.app (there is one for
+macOS/Linux and one for Windows) and run it. Read it from the page each time rather
+than from memory: the page is the source of truth, and the installer it points to
+verifies the download (checksum + signature). The page fills in its commands with
+JavaScript, so if a rendered view of it shows no command, read the raw HTML.
 
 After install completes, re-run `zenable version` to confirm. Do not proceed until
 the CLI is on PATH. If the user declines installation, stop and explain that this
 skill needs the CLI for durable Zenable requirements support.
 
-### Authentication
+### Sign-in and plan
+
+zenable access: !`zenable auth can-i get_findings 2>/dev/null; echo "exit code $?"`
+
+This one call confirms the user is signed in **and** their account has an active
+trial or paid plan: `get_findings` is a paid-plan tool, so the server answers `yes`
+only for trial and paid accounts. If your client didn't run the command above for
+you, run it yourself.
+
+Continue only on exit code 0. For any other code, look it up in the
+[Zenable CLI reference](https://docs.zenable.io/integrations/zenable/commands), tell the
+user what it means and how to fix it, and stop until the check passes.
 
 zenable auth identity: !`zenable auth whoami 2>&1 || echo "NOT AUTHENTICATED"`
 
-If the above shows "NOT AUTHENTICATED" (or any error), ask the user to run `zenable login` in a separate terminal, then re-check. Do not proceed unauthenticated.
+Use the identity above when you tell the user what you found.
 
 ### Zenable MCP
 
@@ -239,7 +252,3 @@ Keep the bar high. Report a thing only if a maintainer would plausibly act on it
 - Be expert but understandable. Professional, approachable, practical.
 - Be concise without being curt. Use bullets when they make a choice easier; use prose when it reads better.
 - Watch for fatigue. This runs in one sitting, and every decision you ask for spends a budget that runs out.
-
-## Bundled resources
-
-- `scripts/install-zenable.sh` — installs the `zenable` CLI when it's missing (only run with explicit user permission).

@@ -330,6 +330,25 @@ def check_referenced_scripts(skill: str, body: str) -> None:
         )
 
 
+def check_inline_commands(skill: str, body: str, allowed_tools: str | None) -> None:
+    """Every `!`-command a skill runs at load time must be covered by its `allowed-tools`.
+
+    Claude Code runs these while loading the skill, before the agent can ask for
+    anything. A command the session hasn't already approved fails the load outright
+    in non-interactive runs, so the skill has to grant each one itself -- either all
+    of Bash, or a `Bash(prefix:*)` matching every piece of a compound command.
+    """
+    tools = [t.strip() for t in (allowed_tools or "").split(",") if t.strip()]
+    if "Bash" in tools:
+        return
+    prefixes = [m.group(1) for t in tools if (m := re.fullmatch(r"Bash\((.+?):\*\)", t))]
+    for command in re.findall(r"!`([^`]+)`", body):
+        for part in re.split(r"\|\||&&|;|\|", command):
+            part = part.strip()
+            if part and part != "true" and not any(part.startswith(prefix) for prefix in prefixes):
+                fail(f"skills/{skill}: load-time command `{part}` is not covered by allowed-tools")
+
+
 def check_skills(namespace: str | None) -> int:
     print("\n== Skills ==")
     skills_dir = PLUGIN_ROOT / "skills"
@@ -354,6 +373,7 @@ def check_skills(namespace: str | None) -> int:
             continue
 
         check_referenced_scripts(skill.name, body)
+        check_inline_commands(skill.name, body, fields.get("allowed-tools"))
 
         name = fields.get("name")
         if name is None:
